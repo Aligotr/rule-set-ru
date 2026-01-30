@@ -5,30 +5,30 @@
 ## 📥 Файлы
 
 - 🌍 **GeoIP**
-  - _v2ray.dat_: https://github.com/Aligotr/rule-set-ru/releases/latest/download/geoip.dat
+  - _v2ray.dat_: https://github.com/aligotr/rule-set-ru/releases/latest/download/geoip.dat
   - _Mihomo.mrs_
-    - 🔁 https://github.com/Aligotr/rule-set-ru/releases/latest/download/geoip_proxy.mrs
+    - 🔁 https://github.com/aligotr/rule-set-ru/releases/latest/download/geoip_proxy.mrs
   - _Sing-box.srs_
-    - 🔁 https://github.com/Aligotr/rule-set-ru/releases/latest/download/geoip_proxy.srs
+    - 🔁 https://github.com/aligotr/rule-set-ru/releases/latest/download/geoip_proxy.srs
 - 🔗 **GeoSite**
-  - _v2ray.dat_: https://github.com/Aligotr/rule-set-ru/releases/latest/download/geosite.dat
+  - _v2ray.dat_: https://github.com/aligotr/rule-set-ru/releases/latest/download/geosite.dat
   - _Mihomo.mrs_
-    - ➡️ https://github.com/Aligotr/rule-set-ru/releases/latest/download/geosite_direct.mrs
-    - 🔁 https://github.com/Aligotr/rule-set-ru/releases/latest/download/geosite_proxy.mrs
-    - 🚫 https://github.com/Aligotr/rule-set-ru/releases/latest/download/geosite_block.mrs
+    - ➡️ https://github.com/aligotr/rule-set-ru/releases/latest/download/geosite_direct.mrs
+    - 🔁 https://github.com/aligotr/rule-set-ru/releases/latest/download/geosite_proxy.mrs
+    - 🚫 https://github.com/aligotr/rule-set-ru/releases/latest/download/geosite_block.mrs
   - _Sing-box.srs_
-    - ➡️ https://github.com/Aligotr/rule-set-ru/releases/latest/download/geosite_direct.srs
-    - 🔁 https://github.com/Aligotr/rule-set-ru/releases/latest/download/geosite_proxy.srs
-    - 🚫 https://github.com/Aligotr/rule-set-ru/releases/latest/download/geosite_block.srs
+    - ➡️ https://github.com/aligotr/rule-set-ru/releases/latest/download/geosite_direct.srs
+    - 🔁 https://github.com/aligotr/rule-set-ru/releases/latest/download/geosite_proxy.srs
+    - 🚫 https://github.com/aligotr/rule-set-ru/releases/latest/download/geosite_block.srs
 - 📦 **Apps**
   - _Mihomo.yaml_
-    - ➡️ https://github.com/Aligotr/rule-set-ru/releases/latest/download/apps_direct.yaml
-    - 🔁 https://github.com/Aligotr/rule-set-ru/releases/latest/download/apps_proxy.yaml
+    - ➡️ https://github.com/aligotr/rule-set-ru/releases/latest/download/apps_direct.yaml
+    - 🔁 https://github.com/aligotr/rule-set-ru/releases/latest/download/apps_proxy.yaml
   - _Sing-box.srs_
-    - ➡️ https://github.com/Aligotr/rule-set-ru/releases/latest/download/apps_direct.srs
-    - 🔁 https://github.com/Aligotr/rule-set-ru/releases/latest/download/apps_proxy.srs
+    - ➡️ https://github.com/aligotr/rule-set-ru/releases/latest/download/apps_direct.srs
+    - 🔁 https://github.com/aligotr/rule-set-ru/releases/latest/download/apps_proxy.srs
 - 🗜 **Дополнительно**
-  - [Исходные текстовые списки (.zip)](https://github.com/Aligotr/rule-set-ru/releases/latest/download/sources.zip)
+  - [Исходные текстовые списки (.zip)](https://github.com/aligotr/rule-set-ru/releases/latest/download/sources.zip)
 
 ## 📁Состав
 
@@ -48,7 +48,7 @@
 
 ## 📦 Как использовать
 
-Актуальные версии правил доступны в разделе [**Releases**](https://github.com/Aligotr/rule-set-ru/releases). Вы можете напрямую ссылаться на URL файлов в ваших конфигурациях приложений для их автоматического обновления.
+Актуальные версии правил доступны в разделе [**Releases**](https://github.com/aligotr/rule-set-ru/releases). Вы можете напрямую ссылаться на URL файлов в ваших конфигурациях приложений для их автоматического обновления.
 
 ### Пример для Mihomo
 
@@ -60,7 +60,7 @@ rule-providers:
     type: http
     behavior: classical
     format: yaml
-    url: https://github.com/Aligotr/rule-set-ru/releases/latest/download/apps_direct.yaml
+    url: https://github.com/aligotr/rule-set-ru/releases/latest/download/apps_direct.yaml
     path: ./rules/apps_direct.yaml
     interval: 86400
 
@@ -68,7 +68,7 @@ rule-providers:
     type: http
     behavior: domain
     format: mrs
-    url: https://github.com/Aligotr/rule-set-ru/releases/latest/download/geosite_proxy.mrs
+    url: https://github.com/aligotr/rule-set-ru/releases/latest/download/geosite_proxy.mrs
     path: ./rules/geosite_proxy.mrs
     interval: 86400
 
@@ -83,8 +83,8 @@ rules:
 ```yaml
 geodata-mode: true
 geox-url:
-  geoip: https://github.com/Aligotr/rule-set-ru/releases/latest/download/geoip.dat
-  geosite: https://github.com/Aligotr/rule-set-ru/releases/latest/download/geosite.dat
+  geoip: https://github.com/aligotr/rule-set-ru/releases/latest/download/geoip.dat
+  geosite: https://github.com/aligotr/rule-set-ru/releases/latest/download/geosite.dat
 
 rules:
   - GEOIP,PRIVATE,DIRECT
@@ -104,7 +104,7 @@ rules:
         "tag": "geoip",
         "type": "remote",
         "format": "binary",
-        "url": "https://github.com/Aligotr/rule-set-ru/releases/latest/download/geoip_proxy.srs",
+        "url": "https://github.com/aligotr/rule-set-ru/releases/latest/download/geoip_proxy.srs",
         "download_detour": "proxy"
       }
     ]
