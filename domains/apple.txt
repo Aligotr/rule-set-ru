@@ -1,0 +1,13 @@
+www-cdn.icloud.com.akadns.net
+aaplimg.com
+apple-cloudkit.com
+apple.co
+apple.com
+apple.news
+apple.com.cn
+appstore.com
+cdn-apple.com
+crashlytics.com
+icloud-content.com
+icloud.com
+icloud.com.cn
