@@ -118,7 +118,6 @@ jobs:
           }
 
           build_mrs "geosite_direct" \
-              "${{ env.OUTPUT_TEXT_PATH }}/geosite_private.txt" \
               "${{ env.OUTPUT_TEXT_PATH }}/geosite_category-gov-ru.txt"
 
           build_mrs "geosite_block" \
@@ -155,7 +154,6 @@ jobs:
           }
 
           build_srs "geosite_direct" \
-              "${{ env.OUTPUT_TEXT_PATH }}/geosite_private.txt" \
               "${{ env.OUTPUT_TEXT_PATH }}/geosite_category-gov-ru.txt"
 
           build_srs "geosite_block" \
