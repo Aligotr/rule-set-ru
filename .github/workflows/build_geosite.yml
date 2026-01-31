@@ -34,6 +34,7 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: ${{ env.DLC_PATH }}/go.mod
+          cache-dependency-path: ${{ env.DLC_PATH }}/go.sum
 
       - name: Install tools
         run: |
