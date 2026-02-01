@@ -2,6 +2,7 @@ steamdb.info
 apkmirror.com
 deepl.com
 artstation.com
+jetbrains.com
 
 # VSCode
 marketplace.visualstudio.com
