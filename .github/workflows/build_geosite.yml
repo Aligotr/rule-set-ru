@@ -120,7 +120,7 @@ jobs:
 
           build_mrs "geosite_direct" \
               "${{ env.OUTPUT_TEXT_PATH }}/geosite_category-gov-ru.txt" \
-              "${{ env.OUTPUT_TEXT_PATH }}/ru-direct.txt"
+              "${{ env.OUTPUT_TEXT_PATH }}/geosite_ru-direct.txt"
 
           build_mrs "geosite_block" \
               "${{ env.OUTPUT_TEXT_PATH }}/geosite_win-spy.txt" \
@@ -157,7 +157,7 @@ jobs:
 
           build_srs "geosite_direct" \
               "${{ env.OUTPUT_TEXT_PATH }}/geosite_category-gov-ru.txt" \
-              "${{ env.OUTPUT_TEXT_PATH }}/ru-direct.txt"
+              "${{ env.OUTPUT_TEXT_PATH }}/geosite_ru-direct.txt"
 
           build_srs "geosite_block" \
               "${{ env.OUTPUT_TEXT_PATH }}/geosite_win-spy.txt" \
@@ -172,7 +172,7 @@ jobs:
         run: |
           cat \
             "${{ env.OUTPUT_TEXT_PATH }}/geosite_category-gov-ru.txt" \
-            "${{ env.OUTPUT_TEXT_PATH }}/ru-direct.txt" | \
+            "${{ env.OUTPUT_TEXT_PATH }}/geosite_ru-direct.txt" | \
           sort -u > "${{ env.OUTPUT_PATH }}/geosite_direct.lst"
 
           cat \
