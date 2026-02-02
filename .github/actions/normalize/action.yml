@@ -43,9 +43,13 @@ runs:
             s/[[:space:]{}\"']*$//;  # Удалить пробелы и кавычки в конце
             /^$/d                    # Удалить пустые строки
           " "$file" > "${out_path}/${prefix}${filename}"
+
+          echo "${out_path}/${prefix}${filename}"
           
           rm "$file"
         }
+
+        echo "${in_path}"
 
         if [ -d "${in_path}" ]; then
           # Если это директория — перебираем файлы
