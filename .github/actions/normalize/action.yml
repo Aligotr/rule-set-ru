@@ -35,7 +35,7 @@ runs:
             s/^[[:space:]{}\"']*//;  # Удалить пробелы и кавычки в начале
             s/[[:space:]{}\"']*$//;  # Удалить пробелы и кавычки в конце
             /^$/d               # Удалить пустые строки
-          ' "$file" > "${out_path}/${prefix}$(basename "$file").txt"
+          ' "$file" > "${out_path}/${prefix}$(basename "$file").${ext}"
           
           rm "$file"
         }
