@@ -42,6 +42,13 @@
     },
     {
       "type": "text",
+      "action": "output",
+      "args": {
+        "outputExtension": ".lst",
+      }
+    },
+    {
+      "type": "text",
       "action": "output"
     }
   ]
