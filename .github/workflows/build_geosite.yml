@@ -63,7 +63,7 @@ jobs:
           curl -sSL "https://antifilter.download/list/domains.lst" > ${{ env.DATA_PATH }}/antifilter-all
           curl -sSL "https://community.antifilter.download/list/domains.lst" > ${{ env.DATA_PATH }}/antifilter-community
           curl -sSL "https://raw.githubusercontent.com/1andrevich/Re-filter-lists/main/domains_all.lst" > ${{ env.DATA_PATH }}/re-filter
-          cat "domains/ru-direct.txt" > ${{ env.DATA_PATH }}/ru-direct
+          cat "domains/a-direct.txt" > ${{ env.DATA_PATH }}/ru-direct
 
           # Block
           curl -sSL "https://raw.githubusercontent.com/crazy-max/WindowsSpyBlocker/master/data/hosts/spy.txt" | grep "0.0.0.0" | awk '{print $2}' > ${{ env.V2RAY_PATH }}/win-spy
@@ -80,7 +80,7 @@ jobs:
           # Сборка
           export LC_ALL=C
           cp "${{ env.DATA_PATH }}"/{private,youtube,discord,category-gov-ru} "${{ env.V2RAY_PATH }}/"
-          cat "domains/ru-blocked.txt" "${{ env.DATA_PATH }}/antifilter-community" "${{ env.DATA_PATH }}/re-filter" | sort --ignore-case -u > "${{ env.V2RAY_PATH }}/ru-blocked"
+          cat "domains/a-proxy.txt" "${{ env.DATA_PATH }}/antifilter-community" "${{ env.DATA_PATH }}/re-filter" | sort --ignore-case -u > "${{ env.V2RAY_PATH }}/ru-blocked"
           cd "${{ env.DLC_PATH }}" && go run ./ --exportlists= --togfwlist=ru-blocked --datapath="../${{ env.V2RAY_PATH }}" && cd ..
           mv "${{ env.DLC_PATH }}/publish/geosite.dat" "${{ env.OUTPUT_PATH }}/"
 
@@ -120,7 +120,7 @@ jobs:
 
           build_mrs "geosite_direct" \
               "${{ env.OUTPUT_TEXT_PATH }}/geosite_category-gov-ru.txt" \
-              "${{ env.OUTPUT_TEXT_PATH }}/ru-direct.txt"
+              "${{ env.OUTPUT_TEXT_PATH }}/a-direct.txt"
 
           build_mrs "geosite_block" \
               "${{ env.OUTPUT_TEXT_PATH }}/geosite_win-spy.txt" \
@@ -157,7 +157,7 @@ jobs:
 
           build_srs "geosite_direct" \
               "${{ env.OUTPUT_TEXT_PATH }}/geosite_category-gov-ru.txt" \
-              "${{ env.OUTPUT_TEXT_PATH }}/ru-direct.txt"
+              "${{ env.OUTPUT_TEXT_PATH }}/a-direct.txt"
 
           build_srs "geosite_block" \
               "${{ env.OUTPUT_TEXT_PATH }}/geosite_win-spy.txt" \
@@ -172,7 +172,7 @@ jobs:
         run: |
           cat \
             "${{ env.OUTPUT_TEXT_PATH }}/geosite_category-gov-ru.txt" \
-            "${{ env.OUTPUT_TEXT_PATH }}/ru-direct.txt" | \
+            "${{ env.OUTPUT_TEXT_PATH }}/a-direct.txt" | \
           sort -u > "${{ env.OUTPUT_PATH }}/geosite_direct.lst"
 
           cat \
