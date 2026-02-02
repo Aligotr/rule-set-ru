@@ -63,6 +63,7 @@ jobs:
           curl -sSL "https://antifilter.download/list/domains.lst" > ${{ env.DATA_PATH }}/antifilter-all
           curl -sSL "https://community.antifilter.download/list/domains.lst" > ${{ env.DATA_PATH }}/antifilter-community
           curl -sSL "https://raw.githubusercontent.com/1andrevich/Re-filter-lists/main/domains_all.lst" > ${{ env.DATA_PATH }}/re-filter
+          cat "domains/ru-direct.txt" > ${{ env.DATA_PATH }}/ru-direct
 
           # Block
           curl -sSL "https://raw.githubusercontent.com/crazy-max/WindowsSpyBlocker/master/data/hosts/spy.txt" | grep "0.0.0.0" | awk '{print $2}' > ${{ env.V2RAY_PATH }}/win-spy
@@ -118,7 +119,8 @@ jobs:
           ls -R "${{ env.OUTPUT_TEXT_PATH }}"
 
           build_mrs "geosite_direct" \
-              "${{ env.OUTPUT_TEXT_PATH }}/geosite_category-gov-ru.txt"
+              "${{ env.OUTPUT_TEXT_PATH }}/geosite_category-gov-ru.txt" \
+              "${{ env.OUTPUT_TEXT_PATH }}/ru-direct.txt"
 
           build_mrs "geosite_block" \
               "${{ env.OUTPUT_TEXT_PATH }}/geosite_win-spy.txt" \
@@ -154,7 +156,8 @@ jobs:
           }
 
           build_srs "geosite_direct" \
-              "${{ env.OUTPUT_TEXT_PATH }}/geosite_category-gov-ru.txt"
+              "${{ env.OUTPUT_TEXT_PATH }}/geosite_category-gov-ru.txt" \
+              "${{ env.OUTPUT_TEXT_PATH }}/ru-direct.txt"
 
           build_srs "geosite_block" \
               "${{ env.OUTPUT_TEXT_PATH }}/geosite_win-spy.txt" \
@@ -168,7 +171,8 @@ jobs:
       - name: Build lst
         run: |
           cat \
-            "${{ env.OUTPUT_TEXT_PATH }}/geosite_category-gov-ru.txt" | \
+            "${{ env.OUTPUT_TEXT_PATH }}/geosite_category-gov-ru.txt" \
+            "${{ env.OUTPUT_TEXT_PATH }}/ru-direct.txt" | \
           sort -u > "${{ env.OUTPUT_PATH }}/geosite_direct.lst"
 
           cat \
