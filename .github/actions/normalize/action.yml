@@ -1,22 +1,32 @@
 name: Normalize Files Action
-description: "Удаляет мусор из строки"
+description: Удаляет мусор из строки
 
 inputs:
   input_path:
-    description: "Путь к папке или одиночному файлу"
+    description: Путь к папке или одиночному файлу
     required: true
   output_path:
-    description: "Путь к директории для сохранения результата"
+    description: Путь к директории для сохранения результата
     required: true
+  prefix:
+    description: Префикс конечного файла
+    required: false
+  ext:
+    description: Расширение конечного файла
+    required: false
 
 runs:
-  using: "composite"
+  using: composite
   steps:
     - shell: bash
       run: |
         process_file() {
           local file="$1"
           local out_path="${{ inputs.output_path }}"
+          local raw_prefix="${{ inputs.prefix }}"
+          local prefix="${raw_prefix:+"${raw_prefix}_"}"
+          local raw_ext="${{ inputs.ext }}"
+          local ext="${raw_ext:-lst}"
         
           [ -e "$file" ] || return 0  
           sed '
@@ -24,7 +34,7 @@ runs:
             s/^[[:space:]{}\"']*//;  # Удалить пробелы и кавычки в начале
             s/[[:space:]{}\"']*$//;  # Удалить пробелы и кавычки в конце
             /^$/d               # Удалить пустые строки
-          ' "$file" > "$out_path/geosite_$(basename "$file").txt"
+          ' "$file" > "${out_path}/${prefix}$(basename "$file").txt"
           
           rm "$file"
         }
@@ -38,5 +48,6 @@ runs:
           # Если это одиночный файл — обрабатываем его
           process_file "${{ inputs.input_path }}"
         else
+
           echo "Warning: Path ${{ inputs.input_path }} not found."
         fi
