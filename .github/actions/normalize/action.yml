@@ -5,7 +5,7 @@ inputs:
   input_path:
     description: "Путь к папке или одиночному файлу"
     required: true
-  output_dir:
+  output_path:
     description: "Путь к директории для сохранения результата"
     required: true
 
@@ -16,7 +16,7 @@ runs:
       run: |
         process_file() {
           local file="$1"
-          local out_dir="${{ inputs.output_dir }}"
+          local out_path="${{ inputs.output_path }}"
         
           [ -e "$file" ] || return 0  
           sed '
@@ -24,7 +24,7 @@ runs:
             s/^[[:space:]{}\"']*//;  # Удалить пробелы и кавычки в начале
             s/[[:space:]{}\"']*$//;  # Удалить пробелы и кавычки в конце
             /^$/d               # Удалить пустые строки
-          ' "$file" > "$out_dir/geosite_$(basename "$file").txt"
+          ' "$file" > "$out_path/geosite_$(basename "$file").txt"
           
           rm "$file"
         }
