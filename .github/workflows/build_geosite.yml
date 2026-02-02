@@ -81,7 +81,7 @@ jobs:
 
           # Сборка
           export LC_ALL=C
-          cp "${{ env.DATA_PATH }}"/{private,youtube,discord,category-gov-ru} "${{ env.V2RAY_PATH }}/"
+          cp "${{ env.DATA_PATH }}"/{private,youtube,discord,instagram,category-gov-ru} "${{ env.V2RAY_PATH }}/"
           cat "domains/a-proxy.txt" "${{ env.DATA_PATH }}/antifilter-community" "${{ env.DATA_PATH }}/re-filter" | sort --ignore-case -u > "${{ env.V2RAY_PATH }}/ru-blocked"
           cd "${{ env.DLC_PATH }}" && go run ./ --exportlists= --togfwlist=ru-blocked --datapath="../${{ env.V2RAY_PATH }}" && cd ..
           mv "${{ env.DLC_PATH }}/publish/geosite.dat" "${{ env.OUTPUT_PATH }}/"
@@ -127,8 +127,9 @@ jobs:
               "${{ env.OUTPUT_TEXT_PATH }}/geosite_category-ads-all.txt"
 
           build_mrs "geosite_proxy" \
-              "${{ env.OUTPUT_TEXT_PATH }}/geosite_discord.txt" \
               "${{ env.OUTPUT_TEXT_PATH }}/geosite_youtube.txt" \
+              "${{ env.OUTPUT_TEXT_PATH }}/geosite_discord.txt" \
+              "${{ env.OUTPUT_TEXT_PATH }}/geosite_instagram.txt" \
               "${{ env.OUTPUT_TEXT_PATH }}/geosite_ru-blocked.txt"
 
       - name: Build Sing-box SRS
@@ -164,8 +165,9 @@ jobs:
               "${{ env.OUTPUT_TEXT_PATH }}/geosite_category-ads-all.txt"
 
           build_srs "geosite_proxy" \
-              "${{ env.OUTPUT_TEXT_PATH }}/geosite_discord.txt" \
               "${{ env.OUTPUT_TEXT_PATH }}/geosite_youtube.txt" \
+              "${{ env.OUTPUT_TEXT_PATH }}/geosite_discord.txt" \
+              "${{ env.OUTPUT_TEXT_PATH }}/geosite_instagram.txt" \
               "${{ env.OUTPUT_TEXT_PATH }}/geosite_ru-blocked.txt"
 
       - name: Build lst
@@ -181,8 +183,9 @@ jobs:
           sort -u > "${{ env.OUTPUT_PATH }}/geosite_block.lst"
 
           cat \
-            "${{ env.OUTPUT_TEXT_PATH }}/geosite_discord.txt" \
             "${{ env.OUTPUT_TEXT_PATH }}/geosite_youtube.txt" \
+            "${{ env.OUTPUT_TEXT_PATH }}/geosite_discord.txt" \
+            "${{ env.OUTPUT_TEXT_PATH }}/geosite_instagram.txt" \
             "${{ env.OUTPUT_TEXT_PATH }}/geosite_ru-blocked.txt" | \
           sort -u > "${{ env.OUTPUT_PATH }}/geosite_proxy.lst"
 
