@@ -59,11 +59,8 @@ jobs:
       - name: Build V2Ray Dat
         run: |
           # Подготовка списков
-          # Proxy
-          curl -sSL "https://antifilter.download/list/domains.lst" > ${{ env.DATA_PATH }}/antifilter-all
-          curl -sSL "https://community.antifilter.download/list/domains.lst" > ${{ env.DATA_PATH }}/antifilter-community
-          curl -sSL "https://raw.githubusercontent.com/1andrevich/Re-filter-lists/main/domains_all.lst" > ${{ env.DATA_PATH }}/re-filter
-          cat "domains/a-direct.txt" > ${{ env.DATA_PATH }}/ru-direct
+          # Direct
+          cat "domains/a-direct.txt" > ${{ env.V2RAY_PATH }}/ru-direct
 
           # Block
           curl -sSL "https://raw.githubusercontent.com/crazy-max/WindowsSpyBlocker/master/data/hosts/spy.txt" | grep "0.0.0.0" | awk '{print $2}' > ${{ env.V2RAY_PATH }}/win-spy
@@ -76,6 +73,11 @@ jobs:
             # curl -sSL "https://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&showintro=1&mimetype=plaintext" | \
             # perl -ne '/^127\.0\.0\.1\s([-_0-9a-zA-Z]+(\.[-_0-9a-zA-Z]+){1,64})$/ && print "$1\n"'
           } | grep -vi "t.co" | sort -f -u > "${{ env.V2RAY_PATH }}/category-ads-all"
+
+          # Proxy
+          curl -sSL "https://antifilter.download/list/domains.lst" > ${{ env.DATA_PATH }}/antifilter-all
+          curl -sSL "https://community.antifilter.download/list/domains.lst" > ${{ env.DATA_PATH }}/antifilter-community
+          curl -sSL "https://raw.githubusercontent.com/1andrevich/Re-filter-lists/main/domains_all.lst" > ${{ env.DATA_PATH }}/re-filter
 
           # Сборка
           export LC_ALL=C
