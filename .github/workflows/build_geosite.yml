@@ -115,6 +115,8 @@ jobs:
               mihomo convert-ruleset domain yaml "$buffer" "${{ env.OUTPUT_PATH }}/${name}.mrs"
           }
 
+          ls -R "${{ env.OUTPUT_TEXT_PATH }}"
+
           build_mrs "geosite_direct" \
               "${{ env.OUTPUT_TEXT_PATH }}/geosite_category-gov-ru.txt"
 
