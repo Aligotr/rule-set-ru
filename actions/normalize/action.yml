@@ -1,0 +1,42 @@
+name: 'Normalize Files Action'
+description: 'Удаляет мусор из строки'
+
+inputs:
+  input_path:
+    description: 'Путь к папке или одиночному файлу'
+    required: true
+  output_dir:
+    description: 'Путь к директории для сохранения результата'
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - shell: bash
+      run: |
+        process_file() {
+          local file="$1"
+          local out_dir="${{ inputs.output_dir }}"
+        
+          [ -e "$file" ] || return 0  
+          sed '
+            s/#.*//;            # Удалить всё после символа #
+            s/^[[:space:]"'\x27]*//;  # Удалить пробелы и кавычки в начале
+            s/[[:space:]"'\x27]*$//;  # Удалить пробелы и кавычки в конце
+            /^$/d               # Удалить пустые строки
+          ' "$file" > "$out_dir/geosite_$(basename "$file").txt"
+          
+          rm "$file"
+        }
+
+        if [ -d "${{ inputs.input_path }}" ]; then
+          # Если это директория — перебираем файлы
+          for f in "${{ inputs.input_path }}"/*; do
+            [ -f "$f" ] && process_file "$f"
+          done
+        elif [ -f "${{ inputs.input_path }}" ]; then
+          # Если это одиночный файл — обрабатываем его
+          process_file "${{ inputs.input_path }}"
+        else
+          echo "Warning: Path ${{ inputs.input_path }} not found."
+        fi
