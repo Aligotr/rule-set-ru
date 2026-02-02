@@ -1,12 +1,12 @@
-name: 'Normalize Files Action'
-description: 'Удаляет мусор из строки'
+name: Normalize Files Action
+description: "Удаляет мусор из строки"
 
 inputs:
   input_path:
-    description: 'Путь к папке или одиночному файлу'
+    description: "Путь к папке или одиночному файлу"
     required: true
   output_dir:
-    description: 'Путь к директории для сохранения результата'
+    description: "Путь к директории для сохранения результата"
     required: true
 
 runs:
@@ -21,8 +21,8 @@ runs:
           [ -e "$file" ] || return 0  
           sed '
             s/#.*//;            # Удалить всё после символа #
-            s/^[[:space:]"'\x27]*//;  # Удалить пробелы и кавычки в начале
-            s/[[:space:]"'\x27]*$//;  # Удалить пробелы и кавычки в конце
+            s/^[[:space:]{}\"']*//;  # Удалить пробелы и кавычки в начале
+            s/[[:space:]{}\"']*$//;  # Удалить пробелы и кавычки в конце
             /^$/d               # Удалить пустые строки
           ' "$file" > "$out_dir/geosite_$(basename "$file").txt"
           
