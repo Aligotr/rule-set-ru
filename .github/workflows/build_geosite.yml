@@ -94,8 +94,8 @@ jobs:
       - name: Normalize and move data
         uses: ./.github/actions/normalize
         with:
-          input_path: ${{ env.V2RAY_PATH }}
-          output_path: ${{ env.OUTPUT_TEXT_PATH }}
+          input_path: "${{ env.V2RAY_PATH }}"
+          output_path: "${{ env.OUTPUT_TEXT_PATH }}"
           prefix: geosite
           ext: txt
 
