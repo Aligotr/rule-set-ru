@@ -78,15 +78,14 @@ jobs:
           } | grep -vi "t.co" | sort -f -u > "${{ env.V2RAY_PATH }}/category-ads-all"
 
           # Proxy
-          curl -sSL "https://antifilter.download/list/domains.lst" > ${{ env.DATA_PATH }}/antifilter-all
           curl -sSL "https://community.antifilter.download/list/domains.lst" > ${{ env.DATA_PATH }}/antifilter-community
           curl -sSL "https://raw.githubusercontent.com/1andrevich/Re-filter-lists/main/domains_all.lst" > ${{ env.DATA_PATH }}/re-filter
           cp "${{ env.DATA_PATH }}"/{youtube,discord} "${{ env.V2RAY_PATH }}/"
           grep -vE "^[[:space:]]*(include:|$)" "${{ env.DATA_PATH }}"/instagram > "${{ env.V2RAY_PATH }}/instagram"
           cat "domains/a-proxy.txt" \
-            "${{ env.DATA_PATH }}/youtube" \
-            "${{ env.DATA_PATH }}/discord" \
-            "${{ env.DATA_PATH }}/instagram" \
+            "${{ env.V2RAY_PATH }}/youtube" \
+            "${{ env.V2RAY_PATH }}/discord" \
+            "${{ env.V2RAY_PATH }}/instagram" \
             "${{ env.DATA_PATH }}/antifilter-community" \
             "${{ env.DATA_PATH }}/re-filter" | \
           sort --ignore-case -u > "${{ env.V2RAY_PATH }}/ru-blocked"
