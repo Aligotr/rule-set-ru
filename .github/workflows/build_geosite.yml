@@ -142,14 +142,7 @@ jobs:
               "${{ env.OUTPUT_TEXT_PATH }}/ru-blocked"
 
       - name: Rename text files
-        run: |
-          for file in ${{ env.OUTPUT_TEXT_PATH }}/*; do
-            base_name=$(basename "$file")
-            filename="${base_name%.*}"
-            if [[ ! "$base_name" == geosite_* ]]; then
-              mv "$file" "${{ env.OUTPUT_TEXT_PATH }}/geosite_${filename}.txt"
-            fi
-          done
+        run: for file in ${{ env.OUTPUT_TEXT_PATH }}/*; do mv "$file" "${{ env.OUTPUT_TEXT_PATH }}/geoip_$(basename "$file").txt"; done
 
       # Uploading results
       - name: Upload artifacts
