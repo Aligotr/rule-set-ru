@@ -82,7 +82,7 @@ jobs:
           # Proxy
           curl -sSL "https://community.antifilter.download/list/domains.lst" > ${{ env.DATA_PATH }}/antifilter-community
           curl -sSL "https://raw.githubusercontent.com/1andrevich/Re-filter-lists/main/domains_all.lst" > ${{ env.DATA_PATH }}/re-filter
-          cp "${{ env.DATA_PATH }}"/{youtube,discord,instagram,instagram-ads} "${{ env.V2RAY_PATH }}/"
+          cp "${{ env.DATA_PATH }}"/{youtube,discord,instagram,instagram-ads,telegram} "${{ env.V2RAY_PATH }}/"
           grep -vE "^[[:space:]]*(include:|$)" "${{ env.DATA_PATH }}"/instagram > "${{ env.V2RAY_PATH }}/instagram"
           cat "domains/a-proxy.txt" \
             "${{ env.DATA_PATH }}/antifilter-community" \
