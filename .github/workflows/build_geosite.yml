@@ -93,7 +93,7 @@ jobs:
           sort --ignore-case -u \
             "domains/a-proxy.txt" \
             "${{ env.DATA_PATH }}/antifilter-community" \
-            "${{ env.DATA_PATH }}/re-filter" | \
+            "${{ env.DATA_PATH }}/re-filter" \
           > "${{ env.V2RAY_PATH }}/ru-blocked"
 
       - name: Normalize and move data
