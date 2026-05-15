@@ -30,6 +30,7 @@ jobs:
       - name: Build GeoIP
         run: |
           # Загрузка данных
+          mkdir -p ./geolite2
           ${{ env.CURL }} --output-dir ./geolite2 -O https://raw.githubusercontent.com/Loyalsoldier/geoip/release/GeoLite2-ASN-Blocks-IPv4.csv
           
           # Сборка
