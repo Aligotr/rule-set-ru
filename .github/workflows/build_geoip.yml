@@ -38,16 +38,6 @@ jobs:
           geoip/geoip convert -c geoip_v2ray_config.json
 
           # Перемещение результатов
-          # srs
-          for f in output/srs/*; do mv "$f" "output/geoip_$(basename "$f")"; done
-          # mrs
-          for f in output/mrs/*; do mv "$f" "output/geoip_$(basename "$f")"; done
-          # lst
-          for f in output/text/*.lst; do mv "$f" "output/geoip_$(basename "$f")"; done
-          # txt
-          for f in output/text/*; do mv "$f" "output/text/geoip_$(basename "$f")"; done
-
-          # Перемещение результатов
           process_files() {
             local dir=$1
             local ext=$2
