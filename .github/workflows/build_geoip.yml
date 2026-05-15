@@ -49,7 +49,7 @@ jobs:
 
             # ru-whitelist -> geoip_whitelist
             if [ -f "output/$dir/ru-whitelist.$ext" ]; then
-              mv "output/$dir/ru-whitelist.$ext" "output/geoip_whitelist.$ext"
+              mv "output/$dir/ru-whitelist.$ext" "output/geoip_direct.$ext"
             fi
 
             # * -> geoip_*
