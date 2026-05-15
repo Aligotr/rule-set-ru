@@ -33,9 +33,17 @@ jobs:
           geoip/geoip convert -c geoip_v2ray_config.json
 
           # Перемещение результатов
+          ls -lR ./output
+          # srs
           # mv output/srs/ru-blocked.srs output/geoip_proxy.srs
+          for f in output/srs/*; do mv "$f" "output/geoip_$(basename "$f")"; done
+          # mrs
           # mv output/mrs/ru-blocked.mrs output/geoip_proxy.mrs
+          for f in output/mrs/*; do mv "$f" "output/geoip_$(basename "$f")"; done
+          # lst
           # mv output/text/ru-blocked.lst output/geoip_proxy.lst
+          for f in output/text/*.lst; do mv "$f" "output/geoip_$(basename "$f")"; done
+          # txt
           for f in output/text/*; do mv "$f" "output/text/geoip_$(basename "$f")"; done
           rm -rf output/{mrs,srs}
 
