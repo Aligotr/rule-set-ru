@@ -76,25 +76,31 @@
     {
       "type": "singboxSRS",
       "action": "output",
-      "wantedList": ["whitelist", "proxy"]
+      "args": {
+        "wantedList": ["whitelist", "proxy"]
+      }
     },
     {
       "type": "mihomoMRS",
       "action": "output",
-      "wantedList": ["whitelist", "proxy"]
+      "args": {
+        "wantedList": ["whitelist", "proxy"]
+      }
     },
     {
       "type": "text",
       "action": "output",
       "args": {
+        "wantedList": ["ru", "whitelist", "proxy"],
         "outputExtension": ".lst"
       },
-      "wantedList": ["ru", "whitelist", "proxy"]
     },
     {
       "type": "text",
       "action": "output",
-      "wantedList": ["whitelist", "proxy"]
+      "args": {
+        "wantedList": ["whitelist", "proxy"]
+      }
     }
   ]
 }
