@@ -143,7 +143,7 @@ jobs:
               "${{ env.OUTPUT_TEXT_PATH }}/ru-blocked"
 
       - name: Rename text files
-        run: for file in ${{ env.OUTPUT_TEXT_PATH }}/*; do mv "$file" "${{ env.OUTPUT_TEXT_PATH }}/geoip_$(basename "$file").txt"; done
+        run: for file in ${{ env.OUTPUT_TEXT_PATH }}/*; do mv "$file" "${{ env.OUTPUT_TEXT_PATH }}/geosite_$(basename "$file").txt"; done
 
       # Uploading results
       - name: Upload artifacts
