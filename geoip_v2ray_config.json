@@ -42,11 +42,13 @@
         "name": "whitelist",
         "uri": "https://github.com/Loyalsoldier/geoip/raw/release/GeoLite2-ASN.mmdb",
         "onlyIPType": "ipv4",
-        "wantedList": [
-          "AS47764", "AS199295", "AS207970", "AS21051", "AS47542", 
-          "AS60863", "AS47541", "AS62243", "AS49988", "AS57973", 
-          "AS207581", "AS213235", "AS28709", "AS201817", "AS49797", 
-          "AS60476", "AS211963", "AS61178", "AS205830"
+        "wantedList": {
+          "direct": [
+            "AS47764", "AS199295", "AS207970", "AS21051", "AS47542", 
+            "AS60863", "AS47541", "AS62243", "AS49988", "AS57973", 
+            "AS207581", "AS213235", "AS28709", "AS201817", "AS49797", 
+            "AS60476", "AS211963", "AS61178", "AS205830"
+          ]
         ]
       }
     },
