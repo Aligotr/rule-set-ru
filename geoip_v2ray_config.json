@@ -13,6 +13,14 @@
       "action": "add",
       "args": {
         "name": "ru-blocked",
+        "uri": "https://www.cloudflare.com/ips-v4"
+      }
+    },
+    {
+      "type": "text",
+      "action": "add",
+      "args": {
+        "name": "ru-blocked",
         "uri": "https://raw.githubusercontent.com/GhostRooter0953/discord-voice-ips/master/voice_domains/discord-voice-ip-list"
       }
     },
