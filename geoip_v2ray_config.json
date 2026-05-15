@@ -4,7 +4,7 @@
       "type": "text",
       "action": "add",
       "args": {
-        "name": "proxy",
+        "name": "ru-blocked",
         "uri": "https://antifilter.download/list/ip.lst"
       }
     },
@@ -12,7 +12,7 @@
       "type": "text",
       "action": "add",
       "args": {
-        "name": "proxy",
+        "name": "ru-blocked",
         "uri": "https://www.cloudflare.com/ips-v4"
       }
     },
@@ -20,7 +20,7 @@
       "type": "text",
       "action": "add",
       "args": {
-        "name": "proxy",
+        "name": "ru-blocked",
         "uri": "https://raw.githubusercontent.com/GhostRooter0953/discord-voice-ips/master/voice_domains/discord-voice-ip-list"
       }
     },
@@ -38,7 +38,7 @@
       "args": {
         "ipv4": "./geolite2/GeoLite2-ASN-Blocks-IPv4.csv",
         "wantedList": {
-          "direct": [
+          "ru-whitelist": [
             "AS47764", "AS199295", "AS207970", "AS21051", "AS47542",
             "AS60863", "AS47541", "AS62243", "AS49988", "AS57973",
             "AS207581", "AS213235", "AS28709", "AS201817", "AS49797",
@@ -77,8 +77,9 @@
       "type": "singboxSRS",
       "action": "output",
       "args": {
+        "outputName": "geoip.dat",
         "onlyIPType": "ipv4",
-        "wantedList": ["direct", "proxy"]
+        "wantedList": ["ru-whitelist", "ru-blocked"]
       }
     },
     {
@@ -86,7 +87,7 @@
       "action": "output",
       "args": {
         "onlyIPType": "ipv4",
-        "wantedList": ["direct", "proxy"]
+        "wantedList": ["ru-whitelist", "ru-blocked"]
       }
     },
     {
@@ -94,7 +95,7 @@
       "action": "output",
       "args": {
         "onlyIPType": "ipv4",
-        "wantedList": ["ru", "direct", "proxy"],
+        "wantedList": ["ru", "ru-whitelist", "ru-blocked"],
         "outputExtension": ".lst"
       },
     },
@@ -103,7 +104,7 @@
       "action": "output",
       "args": {
         "onlyIPType": "ipv4",
-        "wantedList": ["direct", "proxy"]
+        "wantedList": ["ru-whitelist", "ru-blocked"]
       }
     }
   ]
