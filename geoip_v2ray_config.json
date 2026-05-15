@@ -4,7 +4,7 @@
       "type": "text",
       "action": "add",
       "args": {
-        "name": "ru-blocked",
+        "name": "proxy",
         "uri": "https://antifilter.download/list/ip.lst"
       }
     },
@@ -12,7 +12,7 @@
       "type": "text",
       "action": "add",
       "args": {
-        "name": "ru-blocked",
+        "name": "proxy",
         "uri": "https://www.cloudflare.com/ips-v4"
       }
     },
@@ -20,13 +20,40 @@
       "type": "text",
       "action": "add",
       "args": {
-        "name": "ru-blocked",
+        "name": "proxy",
         "uri": "https://raw.githubusercontent.com/GhostRooter0953/discord-voice-ips/master/voice_domains/discord-voice-ip-list"
+      }
+    },
+    {
+      "type": "maxmindmmdb",
+      "action": "add",
+      "args": {
+        "uri": "https://github.com/Loyalsoldier/geoip/raw/release/GeoLite2-Country.mmdb",
+        "category": "country"
+      }
+    },
+    {
+      "type": "maxmindmmdb",
+      "action": "add",
+      "args": {
+        "uri": "https://github.com/Loyalsoldier/geoip/raw/release/GeoLite2-ASN.mmdb",
+        "category": "asn"
       }
     },
     {
       "type": "private",
       "action": "add"
+    },
+    {
+      "type": "text",
+      "action": "remove",
+      "args": {
+        "name": "private",
+        "ipOrCIDR": [
+          "0.0.0.0/8",
+          "::/128"
+        ]
+      }
     }
   ],
   "output": [
@@ -36,8 +63,13 @@
       "args": {
         "outputDir": "output",
         "outputName": "geoip.dat",
-        "wantedList": ["private", "ru-blocked"],
-        "onlyIPType": "ipv4"
+        "onlyIPType": "ipv4",
+        "filter": [
+          "private",
+          "direct",
+          "ru:direct",
+          "proxy"
+        ]
       }
     },
     {
@@ -52,7 +84,7 @@
       "type": "text",
       "action": "output",
       "args": {
-        "outputExtension": ".lst",
+        "outputExtension": ".lst"
       }
     },
     {
