@@ -63,8 +63,7 @@ jobs:
           
           # Direct
           cp "${{ env.DATA_PATH }}"/{private,category-gov-ru,yandex,vk,x5,bitwarden} "${{ env.V2RAY_PATH }}/"
-          
-          # Нормализация
+
           cat "domains/a-direct.txt" \
             "${{ env.V2RAY_PATH }}/category-gov-ru" | \
             "${{ env.V2RAY_PATH }}/yandex" | \
