@@ -63,6 +63,7 @@ jobs:
           
           # Direct
           cp "${{ env.DATA_PATH }}"/{private,category-gov-ru,yandex} "${{ env.V2RAY_PATH }}/"
+          ls -l "${{ env.V2RAY_PATH }}"
 
           sort --ignore-case -u \
             "domains/a-direct.txt" \
