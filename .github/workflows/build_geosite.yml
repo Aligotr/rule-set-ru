@@ -62,7 +62,7 @@ jobs:
           export LC_ALL=C
           
           # Direct
-          cp "${{ env.DATA_PATH }}"/{private,category-gov-ru,bitwarden} "${{ env.V2RAY_PATH }}/"
+          cp "${{ env.DATA_PATH }}"/{private,category-gov-ru,yandex,vk,x5,bitwarden} "${{ env.V2RAY_PATH }}/"
           cat "domains/a-direct.txt" \
             "${{ env.V2RAY_PATH }}/category-gov-ru" | \
           sort --ignore-case -u > "${{ env.V2RAY_PATH }}/ru-direct"
