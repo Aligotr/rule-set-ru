@@ -6,6 +6,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
+      CURL: "curl -fsSL --retry 3 --retry-delay 2 --retry-connrefused"
       OUTPUT_PATH: output
 
     steps:
@@ -28,6 +29,9 @@ jobs:
       # Build
       - name: Build GeoIP
         run: |
+          # Загрузка данных
+          ${{ env.CURL }} --output-dir ./geolite2 -O https://raw.githubusercontent.com/Loyalsoldier/geoip/release/GeoLite2-ASN-Blocks-IPv4.csv
+          
           # Сборка
           go build -C geoip .
           geoip/geoip convert -c geoip_v2ray_config.json
