@@ -62,13 +62,14 @@ jobs:
           export LC_ALL=C
           
           # Direct
-          cp "${{ env.DATA_PATH }}"/{private,category-gov-ru,yandex} "${{ env.V2RAY_PATH }}/"
-          ls -l "${{ env.V2RAY_PATH }}"
-
+          cp "${{ env.DATA_PATH }}"/{private,category-gov-ru,yandex,vk,x5,bitwarden} "${{ env.V2RAY_PATH }}/"
           sort --ignore-case -u \
             "domains/a-direct.txt" \
             "${{ env.V2RAY_PATH }}/category-gov-ru" \
             "${{ env.V2RAY_PATH }}/yandex" \
+            "${{ env.V2RAY_PATH }}/vk" \
+            "${{ env.V2RAY_PATH }}/x5" \
+            "${{ env.V2RAY_PATH }}/bitwarden" \
           > "${{ env.V2RAY_PATH }}/ru-direct"
 
           # Block
@@ -87,15 +88,10 @@ jobs:
           curl -sSL "https://community.antifilter.download/list/domains.lst" > ${{ env.DATA_PATH }}/antifilter-community
           curl -sSL "https://raw.githubusercontent.com/1andrevich/Re-filter-lists/main/domains_all.lst" > ${{ env.DATA_PATH }}/re-filter
           cp "${{ env.DATA_PATH }}"/{youtube,discord,instagram,telegram,jetbrains} "${{ env.V2RAY_PATH }}/"
-          grep -vE "^[[:space:]]*(include:|$)" "${{ env.DATA_PATH }}"/instagram > "${{ env.V2RAY_PATH }}/instagram"
           cat "domains/a-proxy.txt" \
             "${{ env.DATA_PATH }}/antifilter-community" \
             "${{ env.DATA_PATH }}/re-filter" | \
           sort --ignore-case -u > "${{ env.V2RAY_PATH }}/ru-blocked"
-
-          # Сборка
-          cd "${{ env.DLC_PATH }}" && go run ./ --exportlists= --togfwlist=ru-blocked --datapath="../${{ env.V2RAY_PATH }}" && cd ..
-          mv "${{ env.DLC_PATH }}/publish/geosite.dat" "${{ env.OUTPUT_PATH }}/"
 
       - name: Normalize and move data
         uses: ./.github/actions/normalize
@@ -105,6 +101,11 @@ jobs:
 
       - name: Build All Formats
         run: |
+          # V2Ray
+          cd "${{ env.DLC_PATH }}" && go run ./ --exportlists= --togfwlist=ru-blocked --datapath="../${{ env.OUTPUT_TEXT_PATH }}" && cd ..
+          mv "${{ env.DLC_PATH }}/publish/geosite.dat" "${{ env.OUTPUT_PATH }}/"
+
+          # SRS, MRS, LST, TXT
           build_all() {
               local name=$1
               shift
