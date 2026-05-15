@@ -63,8 +63,13 @@ jobs:
           
           # Direct
           cp "${{ env.DATA_PATH }}"/{private,category-gov-ru,yandex,vk,x5,bitwarden} "${{ env.V2RAY_PATH }}/"
+          
+          # Нормализация
           cat "domains/a-direct.txt" \
             "${{ env.V2RAY_PATH }}/category-gov-ru" | \
+            "${{ env.V2RAY_PATH }}/yandex" | \
+            "${{ env.V2RAY_PATH }}/vk" | \
+            "${{ env.V2RAY_PATH }}/x5" | \
           sort --ignore-case -u > "${{ env.V2RAY_PATH }}/ru-direct"
 
           # Block
