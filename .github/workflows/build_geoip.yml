@@ -38,7 +38,6 @@ jobs:
           geoip/geoip convert -c geoip_v2ray_config.json
 
           # Перемещение результатов
-          ls -lR ./output
           # srs
           for f in output/srs/*; do mv "$f" "output/geoip_$(basename "$f")"; done
           # mrs
@@ -48,8 +47,38 @@ jobs:
           # txt
           for f in output/text/*; do mv "$f" "output/text/geoip_$(basename "$f")"; done
 
-          # Очистка данных
-          rm -rf output/{mrs,srs}
+          # Перемещение результатов
+          process_files() {
+            local dir=$1
+            local ext=$2
+
+            # ru-blocked -> geoip_proxy
+            if [ -f "output/$dir/ru-blocked.$ext" ]; then
+              mv "output/$dir/ru-blocked.$ext" "output/geoip_proxy.$ext"
+            fi
+
+            # ru-whitelist -> geoip_whitelist
+            if [ -f "output/$dir/ru-whitelist.$ext" ]; then
+              mv "output/$dir/ru-whitelist.$ext" "output/geoip_whitelist.$ext"
+            fi
+
+            # * -> geoip_*
+            for f in output/$dir/*.$ext; do
+              if [ -f "$f" ]; then
+                mv "$f" "output/geoip_$(basename "$f")"
+              fi
+            done
+
+            # Очистка данных
+            rm -rf output/$dir/
+          }
+
+          process_files "srs" "srs"
+          process_files "mrs" "mrs"
+          process_files "text" "lst"
+
+          # Вывод списка итоговых данных
+          ls -lR ./output
 
       # Uploading results
       - name: Upload Artifacts
