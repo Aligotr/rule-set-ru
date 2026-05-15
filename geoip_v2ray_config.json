@@ -75,22 +75,26 @@
     },
     {
       "type": "singboxSRS",
-      "action": "output"
+      "action": "output",
+      "wantedList": ["whitelist", "proxy"]
     },
     {
       "type": "mihomoMRS",
-      "action": "output"
+      "action": "output",
+      "wantedList": ["whitelist", "proxy"]
     },
     {
       "type": "text",
       "action": "output",
       "args": {
         "outputExtension": ".lst"
-      }
+      },
+      "wantedList": ["ru", "whitelist", "proxy"]
     },
     {
       "type": "text",
-      "action": "output"
+      "action": "output",
+      "wantedList": ["whitelist", "proxy"]
     }
   ]
 }
