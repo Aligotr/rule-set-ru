@@ -63,6 +63,7 @@ jobs:
           
           # Direct
           cp "${{ env.DATA_PATH }}"/{private,category-gov-ru,yandex,vk,x5,bitwarden} "${{ env.V2RAY_PATH }}/"
+
           sort --ignore-case -u \
             "domains/a-direct.txt" \
             "${{ env.V2RAY_PATH }}/category-gov-ru" \
@@ -88,10 +89,12 @@ jobs:
           curl -sSL "https://community.antifilter.download/list/domains.lst" > ${{ env.DATA_PATH }}/antifilter-community
           curl -sSL "https://raw.githubusercontent.com/1andrevich/Re-filter-lists/main/domains_all.lst" > ${{ env.DATA_PATH }}/re-filter
           cp "${{ env.DATA_PATH }}"/{youtube,discord,instagram,telegram,jetbrains} "${{ env.V2RAY_PATH }}/"
-          cat "domains/a-proxy.txt" \
+
+          sort --ignore-case -u \
+            "domains/a-proxy.txt" \
             "${{ env.DATA_PATH }}/antifilter-community" \
             "${{ env.DATA_PATH }}/re-filter" | \
-          sort --ignore-case -u > "${{ env.V2RAY_PATH }}/ru-blocked"
+          > "${{ env.V2RAY_PATH }}/ru-blocked"
 
       - name: Normalize and move data
         uses: ./.github/actions/normalize
