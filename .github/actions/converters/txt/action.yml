@@ -1,5 +1,5 @@
-name: Generate Plain Text List
-description: Конвертация распакованного списка V2Ray в чистый текстовый формат (.txt)
+name: Generate Plain Text Lists
+description: Нормализация flattened-списков в текстовый формат без системных префиксов
 
 inputs:
   input_path:
@@ -12,23 +12,27 @@ inputs:
 runs:
   using: composite
   steps:
-    - shell: bash
+    - name: Normalize TXT
+      shell: bash
       run: |
         process_file() {
           local file="$1"
           local name="$(basename "$file" .txt)"
-          
+
           # Исключение пустых файлов из процесса
           [ -s "$file" ] || return 0
 
           # Удаление технических префиксов (оставление исключительно доменов и правил)
-          sed -E 's/^(domain|full|keyword|regexp)://' "$file" > "${{ inputs.output_path }}/${name}.txt"
-          
-          echo "=> [Plain text] Завершено форматирование (${name}.txt)"
+          sed -E '
+            s/ @[^[:space:]]+$//;
+            s/^(domain|full|keyword|regexp)://
+          ' "$file" > "${{ inputs.output_path }}/${name}.txt"
+
+          echo "=> [TXT] Завершено форматирование (${name}.txt)"
         }
 
         mkdir -p "${{ inputs.output_path }}"
-        
+
         if [ -d "${{ inputs.input_path }}" ]; then
           for f in "${{ inputs.input_path }}"/*.txt; do [ -f "$f" ] && process_file "$f"; done
         elif [ -f "${{ inputs.input_path }}" ]; then
