@@ -127,19 +127,6 @@ jobs:
                 fi
               done
 
-              # Эвристическое распределение (Назначение маршрута на основе ключевых слов в имени)
-              if [[ "$fname" == *"direct"* || "$fname" == *"white"* ]]; then
-                echo "include:loc-$fname" >> ${{ env.DATA_PATH }}/ru-direct
-                echo "=> [Local - Rules] Файл $fname добавлен в список <ru-direct>"
-
-              elif [[ "$fname" == *"proxy"* || "$fname" == *"block"* || "$fname" == *"black"* ]]; then
-                echo "include:loc-$fname" >> ${{ env.DATA_PATH }}/ru-blocked
-                echo "=> [Local - Rules] Файл $fname добавлен в список <ru-blocked>"
-
-              elif [[ "$fname" == *"ads"* || "$fname" == *"spy"* ]]; then
-                echo "include:loc-$fname" >> ${{ env.DATA_PATH }}/category-ads-all
-                echo "=> [Local - Rules] Файл $fname добавлен в список <category-ads-all>"
-
               # Обработка файлов без совпадений
               if [ "$matched" = false ]; then
                 echo "=> Warning [Local - Rules] Локальный файл $fname пропущен, в названии отсутствуют допустимые ключи маршрутизации: $ALL_KEYS"
