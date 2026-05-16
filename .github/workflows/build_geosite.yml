@@ -209,8 +209,9 @@ jobs:
 
           cd "${{ env.DLC_PATH }}"
           go run ./ --datapath="../${{ env.BUILD_DATA_PATH }}" \
-                    --outputdir="../${{ env.OUTPUT_PATH }}" \
-                    --exportlists="${EXPORT_LISTS}"
+                    --outputpath="../${{ env.OUTPUT_PATH }}" \
+                    --exportlists="${EXPORT_LISTS}" \
+                    --togfwlist=
           cd ..
 
           rm -f "${{ env.OUTPUT_PATH }}/gfwlist.txt"
