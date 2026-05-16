@@ -1,12 +1,20 @@
-lists:
+asn_lists:
   ru-whitelist:
     - yandex
     - vk
-    - dns-whitelist
 
   ru-direct:
     - ru-whitelist
     - gosuslugi
+
+  ru-blocked: []
+
+ip_lists:
+  ru-whitelist:
+    - dns-whitelist
+
+  ru-direct:
+    - ru-whitelist
 
   ru-blocked:
     - blocked
