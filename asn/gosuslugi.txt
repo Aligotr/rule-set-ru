@@ -1,0 +1,3 @@
+AS12389   # Rostelecom / government hosting
+AS198610  # Gosuslugi-related infrastructure
+AS200350  # Government digital services
