@@ -8,7 +8,7 @@ publish:
   direct: direct
   blocked: proxy
 
-asn_lists:
+lists_asn:
   whitelist:
     - yandex
     - vk
@@ -19,7 +19,7 @@ asn_lists:
 
   blocked: []
 
-ip_lists:
+lists_ip:
   whitelist:
     - dns-whitelist
 
