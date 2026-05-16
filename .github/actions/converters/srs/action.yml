@@ -12,22 +12,41 @@ inputs:
 runs:
   using: composite
   steps:
-    - shell: bash
+    - name: Bootstrap Sing-box Compiler
+      shell: bash
+      run: |
+        # Проверка наличия компилятора в системе
+        if ! command -v sing-box &> /dev/null; then
+          echo "=> [Srs] Скачивание компилятора Sing-box..."
+          BIN_DIR="${RUNNER_TEMP}/rule_compilers"
+          mkdir -p "$BIN_DIR"
+          
+          SB_URL=$(curl -s https://api.github.com/repos/SagerNet/sing-box/releases/latest | jq -r '.assets[] | select(.name | contains("linux-amd64.tar.gz")) | .browser_download_url')
+          # Извлечение только бинарного файла из архива
+          curl -sL "$SB_URL" | tar -xz --strip-components=1 -C "$BIN_DIR" --wildcards "*/sing-box"
+          
+          echo "$BIN_DIR" >> $GITHUB_PATH
+          echo "=> [Srs] Установка Sing-box завершена"
+        else
+          echo "=> [Srs] Использование существующего компилятора Sing-box"
+        fi
+
+    - name: Compile SRS
+      shell: bash
       run: |
         process_file() {
           local file="$1"
           local name="$(basename "$file" .txt)"
           
-          # Исключение пустых файлов из процесса обработки
           [ -s "$file" ] || return 0
 
-          # Сортировка и распределение правил по массивам JSON-объекта
+          # Распределение правил по массивам JSON-объекта
           SFX=$(grep -vE '^(full|keyword|regexp):' "$file" | jq -RM '. | select(length>0)' | jq -c -s . || echo "[]")
           DOM=$(grep '^full:' "$file" | sed 's/^full://' | jq -Rs 'split("\n") | map(select(length>0))' || echo "[]")
           KWD=$(grep '^keyword:' "$file" | sed 's/^keyword://' | jq -Rs 'split("\n") | map(select(length>0))' || echo "[]")
           RGX=$(grep '^regexp:' "$file" | sed 's/^regexp://' | jq -Rs 'split("\n") | map(select(length>0))' || echo "[]")
 
-          # Формирование промежуточной структуры JSON
+          # Формирование JSON структуры
           jq -n --argjson sfx "$SFX" --argjson dom "$DOM" --argjson kwd "$KWD" --argjson rgx "$RGX" '
           {
             "version": 1,
@@ -41,19 +60,15 @@ runs:
             ]
           }' > tmp_singbox.json
           
-          # Выполнение компиляции целевого бинарного файла
+          # Компиляция целевого бинарного файла
           sing-box rule-set compile tmp_singbox.json --output "${{ inputs.output_path }}/${name}.srs"
-          
-          # Очистка рабочей среды от временных файлов
           rm -f tmp_singbox.json
-
-          echo "=> [Normalize - Sing-box] Завершено форматирование (${name}.srs)"
+          
+          echo "=> [Srs] Завершено форматирование (${name}.srs)"
         }
 
-        # Создание выходной директории
         mkdir -p "${{ inputs.output_path }}"
-        
-        # Маршрутизация обработки (директория или одиночный файл)
+
         if [ -d "${{ inputs.input_path }}" ]; then
           for f in "${{ inputs.input_path }}"/*.txt; do [ -f "$f" ] && process_file "$f"; done
         elif [ -f "${{ inputs.input_path }}" ]; then
