@@ -44,7 +44,7 @@ runs:
           # Формирование JSON структуры
           jq -Rn '
             def strip_attr:
-              sub(" @[A-Za-z0-9_-]+$"; "");
+              sub("( @|:@)[A-Za-z0-9_-]+$"; "");
 
             reduce inputs as $line (
               # Распределение правил по массивам JSON-объекта
