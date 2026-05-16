@@ -106,8 +106,8 @@ jobs:
           done < <(yq -r '.publish | to_entries[] | "\(.key)=\(.value)"' "${{ env.CONFIG_PATH }}")
 
       # Сборка
-      - name: Build Mihomo App Rule-sets (.yaml, .mrs)
-        uses: ./.github/actions/apps/mrs
+      - name: Build Apps YAML Rule-sets (.yaml)
+        uses: ./.github/actions/apps/yaml
         with:
           input_path: ${{ env.STAGING_PATH }}
           output_path: ${{ env.OUTPUT_PATH }}
