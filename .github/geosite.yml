@@ -28,7 +28,9 @@ publish:
   ru-blocked: geosite_proxy
   category-ads-all: geosite_block
 
-expose: []
+expose:
+  - youtube
+  - telegram
 
 externals:
   ext-winspy:
