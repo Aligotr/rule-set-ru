@@ -21,7 +21,7 @@ runs:
 
           [ -s "$file" ] || return 0
 
-          # Формирование YAML-манифеста правил
+          # Создание YAML: первая строка payload, затем остальные с форматированием
           echo "payload:" > "${{ inputs.output_path }}/${name}.yaml"
 
           jq -r '
