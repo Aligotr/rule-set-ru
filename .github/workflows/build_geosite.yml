@@ -7,10 +7,10 @@ jobs:
     runs-on: ubuntu-latest
     env:
       CONFIG_PATH: .github/geosite.yml
-      OUTPUT_PREFIX: geosite
       DATA_PATH: community/data
       RAW_BUILD_DATA_PATH: build-data-raw
       BUILD_DATA_PATH: build-data
+      OUTPUT_PREFIX: geosite
       OUTPUT_PATH: output
       OUTPUT_TEXT_PATH: output/text
       STAGING_PATH: staging
