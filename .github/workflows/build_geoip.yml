@@ -91,11 +91,11 @@ jobs:
               return 0
             fi
 
-            if yq -e ".asn_lists.\"$name\"" "${{ env.CONFIG_PATH }}" > /dev/null 2>&1; then
+            if yq -e ".lists_asn.\"$name\"" "${{ env.CONFIG_PATH }}" > /dev/null 2>&1; then
               while read -r item; do
                 [ -n "$item" ] || continue
                 resolve_asn_list "$item" "$stack|$name"
-              done < <(yq -r ".asn_lists.\"$name\"[]" "${{ env.CONFIG_PATH }}")
+              done < <(yq -r ".lists_asn.\"$name\"[]" "${{ env.CONFIG_PATH }}")
               return 0
             fi
           }
@@ -124,11 +124,11 @@ jobs:
               return 0
             fi
 
-            if yq -e ".ip_lists.\"$name\"" "${{ env.CONFIG_PATH }}" > /dev/null 2>&1; then
+            if yq -e ".lists_ip.\"$name\"" "${{ env.CONFIG_PATH }}" > /dev/null 2>&1; then
               while read -r item; do
                 [ -n "$item" ] || continue
                 resolve_ip_list "$item" "$stack|$name"
-              done < <(yq -r ".ip_lists.\"$name\"[]" "${{ env.CONFIG_PATH }}")
+              done < <(yq -r ".lists_ip.\"$name\"[]" "${{ env.CONFIG_PATH }}")
               return 0
             fi
           }
