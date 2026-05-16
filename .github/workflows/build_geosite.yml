@@ -281,11 +281,11 @@ jobs:
           done < <(yq -r '.publish | to_entries[] | "\(.key)=\(.value)"' "${{ env.CONFIG_PATH }}")
 
       # Сборка
-      - name: Build Plain Text Lists (.txt)
-        uses: ./.github/actions/converters/txt
-        with:
-          input_path: ${{ env.STAGING_PATH }}
-          output_path: ${{ env.OUTPUT_PATH }}
+      # - name: Build Plain Text Lists (.txt)
+      #   uses: ./.github/actions/converters/txt
+      #   with:
+      #     input_path: ${{ env.STAGING_PATH }}
+      #     output_path: ${{ env.OUTPUT_PATH }}
 
       - name: Build Shadowrocket Rule-sets (_sr.list)
         uses: ./.github/actions/converters/shadowrocket
