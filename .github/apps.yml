@@ -1,9 +1,10 @@
 publish:
-  apps_direct: apps_direct
-  apps_proxy: apps_proxy
-
-routing:
-  torrent: apps_direct
   direct: apps_direct
-  blocked: apps_proxy
   proxy: apps_proxy
+
+lists_local:
+  direct:
+    - torrent-clients
+
+  proxy:
+    - ru-blocked
