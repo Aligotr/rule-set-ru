@@ -4,6 +4,9 @@ on:
   schedule:
     - cron: "0 0 * * 1"
 
+permissions:
+  contents: write
+
 jobs:
   job-geoip:
     uses: ./.github/workflows/build_geoip.yml
@@ -20,6 +23,7 @@ jobs:
     env:
       RELEASE_NAME: ""
       TAG_NAME: ""
+
     steps:
       - name: Set variables
         run: |
@@ -45,12 +49,43 @@ jobs:
           name: apps-output
           path: release
 
-      - name: Archive files
+      - name: Archive source files
         run: |
-          cd text && zip -r ../sources.zip . && cd ..
-          rm -rf text/
-          ls -R
-        working-directory: release
+          set -euo pipefail
+
+          # Упаковка директории исходников в единый архив
+          if [ -d "release/text" ]; then
+            cd release/text
+            zip -r ../sources.zip .
+            cd ../..
+            rm -rf release/text
+            echo "=> [Release] Архив sources.zip успешно сформирован"
+          else
+            echo "=> [Release] Директория release/text отсутствует, упаковка пропущена"
+          fi
+
+      - name: Generate SHA256 checksums
+        run: |
+          set -euo pipefail
+
+          cd release
+
+          # Формирование hash-файлов для всех файлов релиза
+          find . -maxdepth 1 -type f ! -name '*.sha256sum' -print0 | while IFS= read -r -d '' file; do
+            clean_name="${file#./}"
+            sha256sum "$clean_name" > "${clean_name}.sha256sum"
+            echo "=> [Release] Хэш-файл создан: ${clean_name}.sha256sum"
+          done
+
+      - name: Show release diagnostics
+        run: |
+          set -euo pipefail
+
+          echo "=> [Release] Финальное содержимое release"
+          find release -maxdepth 1 -type f | sort
+
+          echo "=> [Release] Финальный размер release:"
+          du -sh release
 
       - name: Create Release
         uses: svenstaro/upload-release-action@v2
