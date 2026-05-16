@@ -12,19 +12,35 @@ inputs:
 runs:
   using: composite
   steps:
-    - shell: bash
+    - name: Bootstrap Mihomo Compiler
+      shell: bash
+      run: |
+        # Проверка наличия компилятора в системе
+        if ! command -v mihomo &> /dev/null; then
+          echo "=> [Mrs] Скачивание компилятора Mihomo..."
+          BIN_DIR="${RUNNER_TEMP}/rule_compilers"
+          mkdir -p "$BIN_DIR"
+          
+          MIHOMO_URL=$(curl -s https://api.github.com/repos/MetaCubeX/mihomo/releases/latest | jq -r '.assets[] | select(.name | contains("linux-amd64") and endswith(".gz")) | .browser_download_url' | head -n 1)
+          curl -sL "$MIHOMO_URL" | gunzip > "$BIN_DIR/mihomo"
+          chmod +x "$BIN_DIR/mihomo"
+          
+          echo "$BIN_DIR" >> $GITHUB_PATH
+          echo "=> [Mrs] Установка Mihomo завершена"
+        else
+          echo "=> [Mrs] Использование существующего компилятора Mihomo"
+        fi
+
+    - name: Compile MRS
+      shell: bash
       run: |
         process_file() {
           local file="$1"
           local name="$(basename "$file" .txt)"
           
-          # Исключение пустых файлов из процесса обработки
           [ -s "$file" ] || return 0
 
-          # Создание промежуточного манифеста правил (payload)
           echo "payload:" > tmp_payload.yaml
-          
-          # Преобразование данных с игнорированием неподдерживаемых регулярных выражений
           awk '
             /^full:/    { print "  - \x27" substr($0,6) "\x27"; next }
             /^keyword:/ { print "  - DOMAIN-KEYWORD," substr($0,9); next }
@@ -32,19 +48,15 @@ runs:
             { print "  - \x27+." $0 "\x27" }
           ' "$file" >> tmp_payload.yaml
           
-          # Выполнение компиляции целевого бинарного файла
+          # Компиляция целевого бинарного файла
           mihomo convert-ruleset domain yaml tmp_payload.yaml "${{ inputs.output_path }}/${name}.mrs"
-          
-          # Очистка рабочей среды от временных файлов
           rm -f tmp_payload.yaml
-
-          echo "=> [Normalize - Mrs] Завершено форматирование (${name}.mrs)"
+          
+          echo "=> [Mrs] Завершено форматирование (${name}.mrs)"
         }
 
-        # Создание выходной директории
         mkdir -p "${{ inputs.output_path }}"
-        
-        # Маршрутизация обработки (директория или одиночный файл)
+
         if [ -d "${{ inputs.input_path }}" ]; then
           for f in "${{ inputs.input_path }}"/*.txt; do [ -f "$f" ] && process_file "$f"; done
         elif [ -f "${{ inputs.input_path }}" ]; then
