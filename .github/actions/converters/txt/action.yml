@@ -16,19 +16,18 @@ runs:
       run: |
         process_file() {
           local file="$1"
-          local filename=$(basename "$file")
-          local name="${filename%.*}"
+          local name="$(basename "$file" .txt)"
           
-          # Исключение пустых файлов из процесса обработки
+          # Исключение пустых файлов из процесса
           [ -s "$file" ] || return 0
 
-          # Удаление технических префиксов (сохранение исключительно базовых доменов и правил)
-          cat "$file" | sed -E 's/^(full|keyword|regexp)://' > "${{ inputs.output_path }}/${name}.txt"
-
-          echo "=> [Normalize - Plain text] Завершено форматирование (${name}.txt)"
+          # Удаление технических префиксов (оставление исключительно доменов и правил)
+          sed -E 's/^(full|keyword|regexp)://' "$file" > "${{ inputs.output_path }}/${name}.txt"
+          
+          echo "=> [Plain text] Завершено форматирование (${name}.txt)"
         }
 
-        # Создание выходной директории
+         # Создание выходной директории
         mkdir -p "${{ inputs.output_path }}"
         
         # Маршрутизация обработки (директория или одиночный файл)
