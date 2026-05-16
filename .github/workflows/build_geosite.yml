@@ -197,26 +197,30 @@ jobs:
           EXPORT_LISTS=$(yq -r '.publish | keys | join(",")' "${{ env.CONFIG_PATH }}")
           echo "EXPORT_LISTS=$EXPORT_LISTS" >> "$GITHUB_ENV"
 
-          # Подготовка списка тегов для DAT-профиля
-          jq -n \
-            --argjson publish "$(yq -o=json '.publish | keys' "${{ env.CONFIG_PATH }}")" \
-            --argjson expose "$(yq -o=json '.expose' "${{ env.CONFIG_PATH }}")" \
-            '
-            ($publish + $expose | unique) as $targets
-            | [
-                {
-                  output: "geosite.dat",
-                  targets: $targets
-                }
-              ]
-            ' > datprofile.json
-
-          echo "=> [Resolver] Профиль сборки dat сформирован"
-
           # Логирование итогового набора включенных тегов
           printf '%s\n' "${!VISITED[@]}" | sort > resolved_rules.txt
+
           echo "=> [Resolver] Минимальное дерево правил сформировано"
           cat resolved_rules.txt
+
+      - name: Show Resolver Diagnostics
+        run: |
+          set -euo pipefail
+
+          echo "=> [Diagnostics] Список файлов build-data"
+          find "${{ env.BUILD_DATA_PATH }}" -maxdepth 1 -type f | sort
+
+          echo "=> [Diagnostics] Количество файлов build-data: $(find "${{ env.BUILD_DATA_PATH }}" -maxdepth 1 -type f | wc -l)"
+          echo "=> [Diagnostics] Размер build-data:"
+          du -sh "${{ env.BUILD_DATA_PATH }}"
+
+          echo "=> [Diagnostics] Список корневых тегов publish"
+          yq -r '.publish | keys[]' "${{ env.CONFIG_PATH }}"
+
+          echo "=> [Diagnostics] Список дополнительных тегов expose"
+          yq -r '.expose[]?' "${{ env.CONFIG_PATH }}" || true
+
+          echo "=> [Diagnostics] Значение EXPORT_LISTS: ${EXPORT_LISTS}"
 
       - name: Build V2Ray geosite.dat
         run: |
@@ -226,13 +230,27 @@ jobs:
           go run ./ --datapath="../${{ env.BUILD_DATA_PATH }}" \
                     --outputdir="../${{ env.OUTPUT_PATH }}" \
                     --outputname="geosite.dat" \
-                    --datprofile="../datprofile.json" \
                     --exportlists="${EXPORT_LISTS}"
           cd ..
 
           rm -f "${{ env.OUTPUT_PATH }}/gfwlist.txt"
-          rm -f datprofile.json resolved_rules.txt
+          rm -f resolved_rules.txt
           echo "=> [DAT] Сборка geosite.dat завершена"
+
+      - name: Show Build Diagnostics
+        run: |
+          set -euo pipefail
+
+          echo "=> [Diagnostics] Содержимое output"
+          find "${{ env.OUTPUT_PATH }}" -maxdepth 1 -type f | sort
+
+          if [ -f "${{ env.OUTPUT_PATH }}/geosite.dat" ]; then
+            echo "=> [Diagnostics] Размер geosite.dat:"
+            ls -lh "${{ env.OUTPUT_PATH }}/geosite.dat"
+          fi
+
+          echo "=> [Diagnostics] Размер output:"
+          du -sh "${{ env.OUTPUT_PATH }}"
 
       - name: Prepare Staging Subsystem
         run: |
@@ -251,6 +269,16 @@ jobs:
 
             echo "=> [Staging] Файл '$src_tag.txt' подготовлен как '${public_name}.txt'"
           done < <(yq -r '.publish | to_entries[] | "\(.key)=\(.value)"' "${{ env.CONFIG_PATH }}")
+
+      - name: Show Staging Diagnostics
+        run: |
+          set -euo pipefail
+
+          echo "=> [Diagnostics] Содержимое staging"
+          find "${{ env.STAGING_PATH }}" -maxdepth 1 -type f | sort || true
+
+          echo "=> [Diagnostics] Содержимое output/text"
+          find "${{ env.OUTPUT_TEXT_PATH }}" -maxdepth 1 -type f | sort || true
 
       # Сборка
       - name: Build Plain Text Lists (.txt)
@@ -276,6 +304,16 @@ jobs:
         with:
           input_path: ${{ env.STAGING_PATH }}
           output_path: ${{ env.OUTPUT_PATH }}
+
+      - name: Show Final Diagnostics
+        run: |
+          set -euo pipefail
+
+          echo "=> [Diagnostics] Финальное содержимое output"
+          find "${{ env.OUTPUT_PATH }}" -maxdepth 1 -type f | sort
+
+          echo "=> [Diagnostics] Финальный размер output:"
+          du -sh "${{ env.OUTPUT_PATH }}"
 
       # Загрузка результатов
       - name: Upload artifacts
