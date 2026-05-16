@@ -17,7 +17,7 @@ runs:
       run: |
         # Проверка наличия компилятора в системе
         if ! command -v mihomo &> /dev/null; then
-          echo "=> [Mrs] Скачивание компилятора Mihomo..."
+          echo "=> [MRS] Скачивание компилятора Mihomo..."
           BIN_DIR="${RUNNER_TEMP}/rule_compilers"
           mkdir -p "$BIN_DIR"
           
@@ -26,9 +26,9 @@ runs:
           chmod +x "$BIN_DIR/mihomo"
           
           echo "$BIN_DIR" >> $GITHUB_PATH
-          echo "=> [Mrs] Установка Mihomo завершена"
+          echo "=> [MRS] Установка Mihomo завершена"
         else
-          echo "=> [Mrs] Использование существующего компилятора Mihomo"
+          echo "=> [MRS] Использование существующего компилятора Mihomo"
         fi
 
     - name: Compile MRS
@@ -52,7 +52,7 @@ runs:
           mihomo convert-ruleset domain yaml tmp_payload.yaml "${{ inputs.output_path }}/${name}.mrs"
           rm -f tmp_payload.yaml
           
-          echo "=> [Mrs] Завершено форматирование (${name}.mrs)"
+          echo "=> [MRS] Завершено форматирование (${name}.mrs)"
         }
 
         mkdir -p "${{ inputs.output_path }}"
