@@ -40,25 +40,30 @@ runs:
           
           [ -s "$file" ] || return 0
 
-          # Распределение правил по массивам JSON-объекта
-          SFX=$(grep -vE '^(full|keyword|regexp):' "$file" | jq -RM '. | select(length>0)' | jq -c -s . || echo "[]")
-          DOM=$(grep '^full:' "$file" | sed 's/^full://' | jq -Rs 'split("\n") | map(select(length>0))' || echo "[]")
-          KWD=$(grep '^keyword:' "$file" | sed 's/^keyword://' | jq -Rs 'split("\n") | map(select(length>0))' || echo "[]")
-          RGX=$(grep '^regexp:' "$file" | sed 's/^regexp://' | jq -Rs 'split("\n") | map(select(length>0))' || echo "[]")
-
           # Формирование JSON структуры
-          jq -n --argjson sfx "$SFX" --argjson dom "$DOM" --argjson kwd "$KWD" --argjson rgx "$RGX" '
+          jq -Rn '
+          # Распределение правил по массивам JSON-объекта
+          reduce inputs as $line (
+            { sfx:[], dom:[], kwd:[], rgx:[] };
+            
+            if ($line | length == 0) then .
+            elif ($line | startswith("full:")) then .dom += [$line[5:]]
+            elif ($line | startswith("keyword:")) then .kwd += [$line[8:]]
+            elif ($line | startswith("regexp:")) then .rgx += [$line[7:]]
+            else .sfx += [$line]
+            end
+          ) |
           {
             "version": 1,
             "rules": [
               {
-                "domain_suffix":  (if ($sfx | length) > 0 then $sfx else null end),
-                "domain":         (if ($dom | length) > 0 then $dom else null end),
-                "domain_keyword": (if ($kwd | length) > 0 then $kwd else null end),
-                "domain_regex":   (if ($rgx | length) > 0 then $rgx else null end)
+                "domain_suffix":  (if (.sfx | length) > 0 then .sfx else null end),
+                "domain":         (if (.dom | length) > 0 then .dom else null end),
+                "domain_keyword": (if (.kwd | length) > 0 then .kwd else null end),
+                "domain_regex":   (if (.rgx | length) > 0 then .rgx else null end)
               } | with_entries(select(.value != null))
             ]
-          }' > tmp_singbox.json
+          }' "$file" > tmp_singbox.json
           
           # Компиляция целевого бинарного файла
           sing-box rule-set compile tmp_singbox.json --output "${{ inputs.output_path }}/${name}.srs"
