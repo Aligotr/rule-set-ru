@@ -408,7 +408,7 @@ jobs:
 
       # Сборка
       - name: Build Shadowrocket Rule-sets (_sr.list)
-        uses: ./.github/actions/geoip/converters/shadowrocket
+        uses: ./.github/actions/geoip/shadowrocket
         with:
           input_path: ${{ env.STAGING_PATH }}
           output_path: ${{ env.OUTPUT_PATH }}
