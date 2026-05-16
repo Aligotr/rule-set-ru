@@ -28,6 +28,8 @@ publish:
   ru-blocked: geosite_proxy
   category-ads-all: geosite_block
 
+expose: []
+
 externals:
   ext-winspy:
     url: https://raw.githubusercontent.com/crazy-max/WindowsSpyBlocker/master/data/hosts/spy.txt
