@@ -1,0 +1,52 @@
+name: Generate Mihomo Ruleset
+description: Компиляция правил маршрутизации в бинарный формат Mihomo (.mrs)
+
+inputs:
+  input_path:
+    description: Директория или путь к исходному файлу
+    required: true
+  output_path:
+    description: Директория для сохранения результатов обработки
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: |
+        process_file() {
+          local file="$1"
+          local name="$(basename "$file" .txt)"
+          
+          # Исключение пустых файлов из процесса обработки
+          [ -s "$file" ] || return 0
+
+          # Создание промежуточного манифеста правил (payload)
+          echo "payload:" > tmp_payload.yaml
+          
+          # Преобразование данных с игнорированием неподдерживаемых регулярных выражений
+          awk '
+            /^full:/    { print "  - \x27" substr($0,6) "\x27"; next }
+            /^keyword:/ { print "  - DOMAIN-KEYWORD," substr($0,9); next }
+            /^regexp:/  { next } 
+            { print "  - \x27+." $0 "\x27" }
+          ' "$file" >> tmp_payload.yaml
+          
+          # Выполнение компиляции целевого бинарного файла
+          mihomo convert-ruleset domain yaml tmp_payload.yaml "${{ inputs.output_path }}/${name}.mrs"
+          
+          # Очистка рабочей среды от временных файлов
+          rm -f tmp_payload.yaml
+
+          echo "=> [Normalize - Mrs] Завершено форматирование (${name}.mrs)"
+        }
+
+        # Создание выходной директории
+        mkdir -p "${{ inputs.output_path }}"
+        
+        # Маршрутизация обработки (директория или одиночный файл)
+        if [ -d "${{ inputs.input_path }}" ]; then
+          for f in "${{ inputs.input_path }}"/*.txt; do [ -f "$f" ] && process_file "$f"; done
+        elif [ -f "${{ inputs.input_path }}" ]; then
+          process_file "${{ inputs.input_path }}"
+        fi
