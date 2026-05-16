@@ -25,7 +25,7 @@ runs:
           # Трансляция синтаксиса V2Ray в операторы Surge/Shadowrocket
           awk '
             {
-              sub(/ @[[:alnum:]_-]+$/, "", $0)
+              sub(/( @|:@)[[:alnum:]_-]+$/, "", $0)
             }
             /^full:/    { print "DOMAIN," substr($0,6); next }
             /^keyword:/ { print "DOMAIN-KEYWORD," substr($0,9); next }
