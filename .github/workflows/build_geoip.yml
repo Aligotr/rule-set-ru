@@ -9,6 +9,7 @@ jobs:
       CURL: "curl -fsSL --retry 3 --retry-delay 2 --retry-connrefused"
       CONFIG_PATH: .github/geoip.yml
       GEOIP_PATH: geoip
+      OUTPUT_PREFIX: geoip
       OUTPUT_PATH: output
       OUTPUT_TEXT_PATH: output/text
       STAGING_PATH: staging
@@ -60,8 +61,14 @@ jobs:
         run: |
           set -euo pipefail
 
+          COUNTRY_CODE=$(yq -r '.country_code' "${{ env.CONFIG_PATH }}")
           ASN_PATH=$(yq -r '.asn_path' "${{ env.CONFIG_PATH }}")
           IPS_PATH=$(yq -r '.ips_path' "${{ env.CONFIG_PATH }}")
+
+          make_internal_name() {
+            local name="$1"
+            printf '%s-%s\n' "$COUNTRY_CODE" "$name"
+          }
 
           resolve_asn_list() {
             local name="$1"
@@ -125,8 +132,12 @@ jobs:
             fi
           }
 
-          # Извлечение корневых списков из publish-конфигурации
-          ROOT_LISTS_JSON=$(yq -o=json '.publish | keys' "${{ env.CONFIG_PATH }}")
+          # Извлечение корневых логических списков из publish-конфигурации
+          ROOT_LOGICAL_LISTS_JSON=$(yq -o=json '.publish | keys' "${{ env.CONFIG_PATH }}")
+          ROOT_INTERNAL_LISTS_JSON=$(jq -n \
+            --arg country "$COUNTRY_CODE" \
+            --argjson roots "$ROOT_LOGICAL_LISTS_JSON" \
+            '$roots | map($country + "-" + .)')
 
           # Извлечение списка внешних blocked-источников
           BLOCKED_SOURCES_JSON=$(yq -o=json '.sources.blocked' "${{ env.CONFIG_PATH }}")
@@ -141,8 +152,10 @@ jobs:
             asn_json=$(resolve_asn_list "$root" "" | awk '!seen[$0]++' | jq -R . | jq -s .)
 
             if [ "$(echo "$asn_json" | jq 'length')" -gt 0 ]; then
+              internal_name=$(make_internal_name "$root")
+
               jq \
-                --arg key "$root" \
+                --arg key "$internal_name" \
                 --argjson value "$asn_json" \
                 '. + {($key): $value}' \
                 "$ASN_WANTED_LIST_FILE" > "${ASN_WANTED_LIST_FILE}.tmp"
@@ -158,18 +171,19 @@ jobs:
           rm -f "$ASN_WANTED_LIST_FILE"
 
           # Формирование IP-массивов для root-списков
-          RU_WHITELIST_IP_JSON=$(resolve_ip_list "ru-whitelist" "" | awk '!seen[$0]++' | jq -R . | jq -s .)
-          RU_DIRECT_IP_JSON=$(resolve_ip_list "ru-direct" "" | awk '!seen[$0]++' | jq -R . | jq -s .)
-          RU_BLOCKED_IP_JSON=$(resolve_ip_list "ru-blocked" "" | awk '!seen[$0]++' | jq -R . | jq -s .)
+          WHITELIST_IP_JSON=$(resolve_ip_list "whitelist" "" | awk '!seen[$0]++' | jq -R . | jq -s .)
+          DIRECT_IP_JSON=$(resolve_ip_list "direct" "" | awk '!seen[$0]++' | jq -R . | jq -s .)
+          BLOCKED_IP_JSON=$(resolve_ip_list "blocked" "" | awk '!seen[$0]++' | jq -R . | jq -s .)
 
           # Формирование конфигурации сборки
           jq -n \
-            --argjson root_lists "$ROOT_LISTS_JSON" \
+            --arg country "$COUNTRY_CODE" \
+            --argjson root_internal_lists "$ROOT_INTERNAL_LISTS_JSON" \
             --argjson blocked_sources "$BLOCKED_SOURCES_JSON" \
             --argjson asn_wanted_list "$ASN_WANTED_LIST_JSON" \
-            --argjson ru_whitelist_ip "$RU_WHITELIST_IP_JSON" \
-            --argjson ru_direct_ip "$RU_DIRECT_IP_JSON" \
-            --argjson ru_blocked_ip "$RU_BLOCKED_IP_JSON" \
+            --argjson whitelist_ip "$WHITELIST_IP_JSON" \
+            --argjson direct_ip "$DIRECT_IP_JSON" \
+            --argjson blocked_ip "$BLOCKED_IP_JSON" \
             '
             {
               input: (
@@ -178,7 +192,7 @@ jobs:
                     type: "text",
                     action: "add",
                     args: {
-                      name: "ru-blocked",
+                      name: ($country + "-blocked"),
                       uri: .
                     }
                   }
@@ -196,24 +210,24 @@ jobs:
                     type: "text",
                     action: "add",
                     args: {
-                      name: "ru-whitelist",
-                      ipOrCIDR: $ru_whitelist_ip
+                      name: ($country + "-whitelist"),
+                      ipOrCIDR: $whitelist_ip
                     }
                   },
                   {
                     type: "text",
                     action: "add",
                     args: {
-                      name: "ru-direct",
-                      ipOrCIDR: $ru_direct_ip
+                      name: ($country + "-direct"),
+                      ipOrCIDR: $direct_ip
                     }
                   },
                   {
                     type: "text",
                     action: "add",
                     args: {
-                      name: "ru-blocked",
-                      ipOrCIDR: $ru_blocked_ip
+                      name: ($country + "-blocked"),
+                      ipOrCIDR: $blocked_ip
                     }
                   },
                   {
@@ -249,7 +263,7 @@ jobs:
                   args: {
                     outputName: "geoip.dat",
                     onlyIPType: "ipv4",
-                    wantedList: $root_lists
+                    wantedList: $root_internal_lists
                   }
                 },
                 {
@@ -257,7 +271,7 @@ jobs:
                   action: "output",
                   args: {
                     onlyIPType: "ipv4",
-                    wantedList: $root_lists
+                    wantedList: $root_internal_lists
                   }
                 },
                 {
@@ -265,7 +279,7 @@ jobs:
                   action: "output",
                   args: {
                     onlyIPType: "ipv4",
-                    wantedList: $root_lists,
+                    wantedList: $root_internal_lists,
                     outputDir: "output/shadowrocket",
                     outputExtension: ".txt"
                   }
@@ -292,6 +306,18 @@ jobs:
         run: |
           set -euo pipefail
 
+          COUNTRY_CODE=$(yq -r '.country_code' "${{ env.CONFIG_PATH }}")
+
+          make_internal_name() {
+            local name="$1"
+            printf '%s-%s\n' "$COUNTRY_CODE" "$name"
+          }
+
+          make_public_name() {
+            local name="$1"
+            printf '%s_%s\n' "${{ env.OUTPUT_PREFIX }}" "$name"
+          }
+
           # Выделение буферной директории для переименования промежуточных файлов
           mkdir -p "${{ env.STAGING_PATH }}"
 
@@ -305,11 +331,13 @@ jobs:
             fi
 
             while IFS='=' read -r src_tag public_name; do
-              src_file="output/$dir/${src_tag}.${ext}"
+              internal_name=$(make_internal_name "$src_tag")
+              output_name=$(make_public_name "$public_name")
+              src_file="output/$dir/${internal_name}.${ext}"
               [ -f "$src_file" ] || continue
 
-              mv "$src_file" "${{ env.OUTPUT_PATH }}/${public_name}.${ext}"
-              echo "=> [GeoIP - Output] Файл '${src_tag}.${ext}' подготовлен как '${public_name}.${ext}'"
+              mv "$src_file" "${{ env.OUTPUT_PATH }}/${output_name}.${ext}"
+              echo "=> [GeoIP - Output] Файл '${internal_name}.${ext}' подготовлен как '${output_name}.${ext}'"
             done < <(yq -r '.publish | to_entries[] | "\(.key)=\(.value)"' "${{ env.CONFIG_PATH }}")
 
             rm -rf "output/$dir"
@@ -321,11 +349,13 @@ jobs:
           # Копирование и переименование промежуточных текстовых файлов для Shadowrocket
           if [ -d "output/shadowrocket" ]; then
             while IFS='=' read -r src_tag public_name; do
-              src_file="output/shadowrocket/${src_tag}.txt"
+              internal_name=$(make_internal_name "$src_tag")
+              output_name=$(make_public_name "$public_name")
+              src_file="output/shadowrocket/${internal_name}.txt"
               [ -f "$src_file" ] || continue
 
-              mv "$src_file" "${{ env.STAGING_PATH }}/${public_name}.txt"
-              echo "=> [GeoIP - Staging] Файл '${src_tag}.txt' подготовлен как '${public_name}.txt'"
+              mv "$src_file" "${{ env.STAGING_PATH }}/${output_name}.txt"
+              echo "=> [GeoIP - Staging] Файл '${internal_name}.txt' подготовлен как '${output_name}.txt'"
             done < <(yq -r '.publish | to_entries[] | "\(.key)=\(.value)"' "${{ env.CONFIG_PATH }}")
 
             rm -rf "output/shadowrocket"
