@@ -62,6 +62,7 @@ jobs:
           set -euo pipefail
 
           COUNTRY_CODE=$(yq -r '.country_code' "${{ env.CONFIG_PATH }}")
+          ASN_CSV_PATH="./${{ env.GEOIP_PATH }}/geolite2/GeoLite2-ASN-Blocks-IPv4.csv"
           ASN_PATH=$(yq -r '.asn_path' "${{ env.CONFIG_PATH }}")
           IPS_PATH=$(yq -r '.ips_path' "${{ env.CONFIG_PATH }}")
 
@@ -178,6 +179,7 @@ jobs:
           # Формирование input-блока конфигурации
           INPUT_JSON=$(jq -n \
             --arg country "$COUNTRY_CODE" \
+            --arg asn_csv_path "$ASN_CSV_PATH" \
             --argjson blocked_sources "$BLOCKED_SOURCES_JSON" \
             --argjson asn_wanted_list "$ASN_WANTED_LIST_JSON" \
             --argjson whitelist_ip "$WHITELIST_IP_JSON" \
@@ -203,7 +205,7 @@ jobs:
                     type: "maxmindGeoLite2ASNCSV",
                     action: "add",
                     args: {
-                      ipv4: "./geolite2/GeoLite2-ASN-Blocks-IPv4.csv",
+                      ipv4: $asn_csv_path,
                       wantedList: $asn_wanted_list
                     }
                   }
