@@ -52,7 +52,7 @@ runs:
               .rules[]? | .rules[]? | select(.process_name != null) | .process_name[]
             ]
             | unique[]
-            | "  - PROCESS-NAME," + .
+            | "  - PACKAGE-NAME," + .
           ' "$file" >> "$tmp_yaml"
 
           jq -r '
