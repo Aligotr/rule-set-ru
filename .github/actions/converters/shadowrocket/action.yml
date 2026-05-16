@@ -1,5 +1,5 @@
-name: Generate Shadowrocket Rule-set
-description: Разбор и преобразование списков в формат синтаксиса Shadowrocket/Surge (_sr.list)
+name: Generate Shadowrocket Ruleset
+description: Преобразование flattened-списков в формат Shadowrocket (_sr.list)
 
 inputs:
   input_path:
@@ -12,29 +12,33 @@ inputs:
 runs:
   using: composite
   steps:
-    - shell: bash
+    - name: Compile Shadowrocket
+      shell: bash
       run: |
         process_file() {
           local file="$1"
           local name="$(basename "$file" .txt)"
-          
+
           # Исключение пустых файлов
           [ -s "$file" ] || return 0
 
           # Трансляция синтаксиса V2Ray в операторы Surge/Shadowrocket
           awk '
-            /^full:/ { print "DOMAIN," substr($0,6); next }
+            {
+              sub(/ @[[:alnum:]_-]+$/, "", $0)
+            }
+            /^full:/    { print "DOMAIN," substr($0,6); next }
             /^keyword:/ { print "DOMAIN-KEYWORD," substr($0,9); next }
-            /^regexp:/ { print "URL-REGEX," substr($0,8); next }
-            /^domain:/ { print "DOMAIN-SUFFIX," substr($0,8); next }
-            { print "DOMAIN-SUFFIX," $0 } # Fallback для доменов без префикса
+            /^regexp:/  { print "URL-REGEX," substr($0,8); next }
+            /^domain:/  { print "DOMAIN-SUFFIX," substr($0,8); next }
+            { print "DOMAIN-SUFFIX," $0 }
           ' "$file" > "${{ inputs.output_path }}/${name}_sr.list"
-          
+
           echo "=> [Shadowrocket] Завершено форматирование (${name}_sr.list)"
         }
 
         mkdir -p "${{ inputs.output_path }}"
-        
+
         if [ -d "${{ inputs.input_path }}" ]; then
           for f in "${{ inputs.input_path }}"/*.txt; do [ -f "$f" ] && process_file "$f"; done
         elif [ -f "${{ inputs.input_path }}" ]; then
