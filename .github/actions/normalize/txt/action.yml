@@ -24,6 +24,8 @@ runs:
 
           # Удаление технических префиксов (сохранение исключительно базовых доменов и правил)
           cat "$file" | sed -E 's/^(full|keyword|regexp)://' > "${{ inputs.output_path }}/${name}.txt"
+
+          echo "=> [Normalize - Plain text] Завершено форматирование (${name}.txt)"
         }
 
         # Создание выходной директории
