@@ -9,6 +9,7 @@ jobs:
       CONFIG_PATH: .github/apps.yml
       RAW_PATH: apps-raw
       STAGING_PATH: staging
+      OUTPUT_PREFIX: apps
       OUTPUT_PATH: output
       OUTPUT_TEXT_PATH: output/text
 
@@ -40,7 +41,7 @@ jobs:
           # Копирование исходных JSON-файлов в архив исходников
           for f in apps/*.json; do
             [ -e "$f" ] || continue
-            cp "$f" "${{ env.OUTPUT_TEXT_PATH }}/apps_$(basename "$f")"
+            cp "$f" "${{ env.OUTPUT_TEXT_PATH }}/${{ env.OUTPUT_PREFIX }}_$(basename "$f")"
             echo "=> [Apps - Sources] Файл '$(basename "$f")' добавлен в архив исходников"
           done
 
@@ -48,77 +49,60 @@ jobs:
         run: |
           set -euo pipefail
 
-          declare -A ROUTE_MAP=()
+          # Формирование merged-списков по конфигурации
+          while read -r list_name; do
+            [ -n "$list_name" ] || continue
 
-          while read -r key; do
-            ROUTE_MAP["$key"]="$(yq -r ".routing.\"$key\"" "${{ env.CONFIG_PATH }}")"
-          done < <(yq -r '.routing | keys[]' "${{ env.CONFIG_PATH }}")
+            tmp_list="${{ env.RAW_PATH }}/.${list_name}.list"
+            : > "$tmp_list"
 
-          # Извлечение всех ключей словаря для логирования
-          # Замена пробелов на запятые для читабельного вывода
-          ALL_KEYS=$(printf "%s\n" "${!ROUTE_MAP[@]}" | paste -sd ", " -)
+            while read -r item; do
+              [ -n "$item" ] || continue
 
-          declare -A GROUP_FILES=()
-
-          for file in apps/*.json; do
-            # Пропуск шага в случае отсутствия JSON-файлов
-            [ -e "$file" ] || continue
-
-            # Извлечение базового имени файла
-            fname=$(basename "$file" .json)
-
-            matched=false
-
-            # Эвристическое распределение (Назначение маршрута на основе ключевых слов в имени)
-            # Итерация по всем ключам словаря для поиска совпадений в имени файла
-            for key in "${!ROUTE_MAP[@]}"; do
-              if [[ "$fname" == *"$key"* ]]; then
-                # Извлечение целевой группы из словаря
-                dest="${ROUTE_MAP[$key]}"
-
-                GROUP_FILES["$dest"]+="$file"$'\n'
-                echo "=> [Apps - Rules] Файл '$fname' содержит ключ '$key', добавлен в список <$dest>"
-
-                matched=true
-                break # Остановка поиска при первом найденном совпадении
+              if [ -f "apps/${item}.json" ]; then
+                printf '%s\n' "apps/${item}.json" >> "$tmp_list"
+                echo "=> [Apps - Rules] Файл '${item}.json' добавлен в список <$list_name>"
+              else
+                echo "=> Warning [Apps - Rules] Локальный файл '${item}.json' не найден"
               fi
-            done
+            done < <(yq -r ".lists_local.\"$list_name\"[]" "${{ env.CONFIG_PATH }}")
 
-            # Обработка файлов без совпадений
-            if [ "$matched" = false ]; then
-              echo "=> Warning [Apps - Rules] Локальный файл $fname пропущен, в названии отсутствуют допустимые ключи маршрутизации: $ALL_KEYS"
+            if [ -s "$tmp_list" ]; then
+              jq -s '
+                {
+                  version: (.[0].version // 1),
+                  rules: [ .[] | .rules[]? ]
+                }
+              ' $(sed '/^$/d' "$tmp_list") > "${{ env.STAGING_PATH }}/${list_name}.json"
+
+              echo "=> [Apps - Rules] Список '$list_name' успешно сформирован"
+            else
+              echo "=> Warning [Apps - Rules] Список '$list_name' пуст, формирование пропущено"
             fi
-          done
-
-          # Формирование merged-списков по целевым группам
-          for group in "${!GROUP_FILES[@]}"; do
-            tmp_list="${{ env.RAW_PATH }}/.${group}.list"
-            printf "%s" "${GROUP_FILES[$group]}" > "$tmp_list"
-
-            jq -s '
-              {
-                version: (.[0].version // 1),
-                rules: [ .[] | .rules[]? ]
-              }
-            ' $(sed '/^$/d' "$tmp_list") > "${{ env.STAGING_PATH }}/${group}.json"
 
             rm -f "$tmp_list"
-            echo "=> [Apps - Rules] Список '$group' успешно сформирован"
-          done
+          done < <(yq -r '.publish | keys[]' "${{ env.CONFIG_PATH }}")
 
       - name: Prepare Staging Subsystem
         run: |
           set -euo pipefail
+
+          make_public_name() {
+            local name="$1"
+            printf '%s_%s\n' "${{ env.OUTPUT_PREFIX }}" "$name"
+          }
 
           # Копирование целевых JSON-файлов с применением финальных публичных имен конфигурации
           while IFS='=' read -r src_tag public_name; do
             src_file="${{ env.STAGING_PATH }}/${src_tag}.json"
             [ -f "$src_file" ] || continue
 
-            cp "$src_file" "${{ env.STAGING_PATH }}/${public_name}.json"
+            output_name=$(make_public_name "$public_name")
+
+            cp "$src_file" "${{ env.STAGING_PATH }}/${output_name}.json"
             rm -f "$src_file"
 
-            echo "=> [Apps - Staging] Файл '$src_tag.json' подготовлен как '${public_name}.json'"
+            echo "=> [Apps - Staging] Файл '$src_tag.json' подготовлен как '${output_name}.json'"
           done < <(yq -r '.publish | to_entries[] | "\(.key)=\(.value)"' "${{ env.CONFIG_PATH }}")
 
       # Сборка
