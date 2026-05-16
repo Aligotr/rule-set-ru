@@ -1,5 +1,5 @@
 name: Normalize Files Action
-description: Удаление мусора из строк и опциональная дедупликация
+description: Удаляет мусор из строк и выполняет опциональную дедупликацию
 
 inputs:
   input_path:
