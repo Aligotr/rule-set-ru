@@ -20,12 +20,13 @@ runs:
           echo "=> [MRS] Скачивание компилятора Mihomo..."
           BIN_DIR="${RUNNER_TEMP}/rule_compilers"
           mkdir -p "$BIN_DIR"
-          
+
           MIHOMO_URL=$(curl -s https://api.github.com/repos/MetaCubeX/mihomo/releases/latest | jq -r '.assets[] | select(.name | contains("linux-amd64") and endswith(".gz")) | .browser_download_url' | head -n 1)
           curl -sL "$MIHOMO_URL" | gunzip > "$BIN_DIR/mihomo"
           chmod +x "$BIN_DIR/mihomo"
-          
+
           echo "$BIN_DIR" >> $GITHUB_PATH
+          export PATH="$BIN_DIR:$PATH"
           echo "=> [MRS] Установка Mihomo завершена"
         else
           echo "=> [MRS] Использование существующего компилятора Mihomo"
@@ -37,22 +38,26 @@ runs:
         process_file() {
           local file="$1"
           local name="$(basename "$file" .txt)"
-          
+
+          # Исключение пустых файлов
           [ -s "$file" ] || return 0
 
           echo "payload:" > tmp_payload.yaml
           awk '
+            {
+              sub(/ @[[:alnum:]_-]+$/, "", $0)
+            }
             /^full:/    { print "  - \x27" substr($0,6) "\x27"; next }
             /^keyword:/ { print "  - DOMAIN-KEYWORD," substr($0,9); next }
-            /^regexp:/  { next } 
+            /^regexp:/  { next }
             /^domain:/  { print "  - \x27+." substr($0,8) "\x27"; next }
             { print "  - \x27+." $0 "\x27" }
           ' "$file" >> tmp_payload.yaml
-          
+
           # Компиляция целевого бинарного файла
           mihomo convert-ruleset domain yaml tmp_payload.yaml "${{ inputs.output_path }}/${name}.mrs"
           rm -f tmp_payload.yaml
-          
+
           echo "=> [MRS] Завершено форматирование (${name}.mrs)"
         }
 
