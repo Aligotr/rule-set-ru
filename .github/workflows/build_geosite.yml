@@ -138,10 +138,10 @@ jobs:
         run: |
           # Выполнение генерации dat-файла (Устранение дубликатов, нормализация)
           cd "${{ env.DLC_PATH }}"
-          go run ./ --datapath="../${{ env.DATA_PATH }}" --outputdir="../${{ env.OUTPUT_PATH }}" --exportlists=ru-direct,ru-blocked,category-ads-all
+          go run ./ --datapath="../${{ env.DATA_PATH }}" --exportlists=ru-direct,ru-blocked,category-ads-all
           
           # Сохранение собранного geosite.dat в релизную директорию
-          # cp publish/geosite.dat "../${{ env.OUTPUT_PATH }}/geosite.dat"
+          cp publish/geosite.dat "../${{ env.OUTPUT_PATH }}/geosite.dat"
 
       - name: Unpack V2Ray geosite.dat to text
         uses: ./.github/actions/converters/dat/unpack
