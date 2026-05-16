@@ -22,7 +22,7 @@ runs:
           # Исключение пустых файлов
           [ -s "$file" ] || return 0
 
-          # Трансляция синтаксиса V2Ray в операторы Surge/Shadowrocket
+          # Трансляция синтаксиса V2Ray в операторы Shadowrocket
           awk '
             {
               sub(/( @|:@)[[:alnum:]_-]+$/, "", $0)
