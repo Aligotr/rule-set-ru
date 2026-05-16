@@ -187,13 +187,29 @@ jobs:
             resolve_file "$root"
           done < <(yq -r '.publish | keys[]' "${{ env.CONFIG_PATH }}")
 
+          # Извлечение дополнительных тегов expose-конфигурации
+          while read -r root; do
+            [ -n "$root" ] || continue
+            resolve_file "$root"
+          done < <(yq -r '.expose[]?' "${{ env.CONFIG_PATH }}")
+
           # Подготовка списка экспорта для текстовых файлов
           EXPORT_LISTS=$(yq -r '.publish | keys | join(",")' "${{ env.CONFIG_PATH }}")
           echo "EXPORT_LISTS=$EXPORT_LISTS" >> "$GITHUB_ENV"
 
-          # Формирование профиля сборки DAT
-          yq -o=json '.publish | keys' "${{ env.CONFIG_PATH }}" > dat_root_tags.json
-          jq '{output: "geosite.dat", targets: .}' dat_root_tags.json > datprofile.json
+          # Подготовка списка тегов для DAT-профиля
+          jq -n \
+            --argjson publish "$(yq -o=json '.publish | keys' "${{ env.CONFIG_PATH }}")" \
+            --argjson expose "$(yq -o=json '.expose' "${{ env.CONFIG_PATH }}")" \
+            '
+            ($publish + $expose | unique) as $targets
+            | [
+                {
+                  output: "geosite.dat",
+                  targets: $targets
+                }
+              ]
+            ' > datprofile.json
 
           echo "=> [Resolver] Профиль сборки dat сформирован"
 
@@ -202,7 +218,6 @@ jobs:
           echo "=> [Resolver] Минимальное дерево правил сформировано"
           cat resolved_rules.txt
 
-      # Сборка V2Ray
       - name: Build V2Ray geosite.dat
         run: |
           set -euo pipefail
@@ -216,7 +231,7 @@ jobs:
           cd ..
 
           rm -f "${{ env.OUTPUT_PATH }}/gfwlist.txt"
-          rm -f dat_root_tags.json datprofile.json resolved_rules.txt
+          rm -f datprofile.json resolved_rules.txt
           echo "=> [DAT] Сборка geosite.dat завершена"
 
       - name: Prepare Staging Subsystem
@@ -237,7 +252,7 @@ jobs:
             echo "=> [Staging] Файл '$src_tag.txt' подготовлен как '${public_name}.txt'"
           done < <(yq -r '.publish | to_entries[] | "\(.key)=\(.value)"' "${{ env.CONFIG_PATH }}")
 
-      # Сборка прочих форматов
+      # Сборка
       - name: Build Plain Text Lists (.txt)
         uses: ./.github/actions/converters/txt
         with:
