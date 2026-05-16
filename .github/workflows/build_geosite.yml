@@ -287,19 +287,19 @@ jobs:
 
       # Сборка
       - name: Build Shadowrocket Rule-sets (_sr.list)
-        uses: ./.github/actions/converters/shadowrocket
+        uses: ./.github/actions/geosite/shadowrocket
         with:
           input_path: ${{ env.STAGING_PATH }}
           output_path: ${{ env.OUTPUT_PATH }}
 
       - name: Build Mihomo Rule-sets (.mrs)
-        uses: ./.github/actions/converters/mrs
+        uses: ./.github/actions/geosite/mrs
         with:
           input_path: ${{ env.STAGING_PATH }}
           output_path: ${{ env.OUTPUT_PATH }}
 
       - name: Build Sing-box Rule-sets (.srs)
-        uses: ./.github/actions/converters/srs
+        uses: ./.github/actions/geosite/srs
         with:
           input_path: ${{ env.STAGING_PATH }}
           output_path: ${{ env.OUTPUT_PATH }}
