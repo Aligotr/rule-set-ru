@@ -50,9 +50,10 @@ runs:
             elif ($line | startswith("full:")) then .dom += [$line[5:]]
             elif ($line | startswith("keyword:")) then .kwd += [$line[8:]]
             elif ($line | startswith("regexp:")) then .rgx += [$line[7:]]
+            elif ($line | startswith("domain:")) then .sfx += [$line[7:]]
             else .sfx += [$line]
             end
-          ) |
+          ) | 
           {
             "version": 1,
             "rules": [
@@ -63,7 +64,8 @@ runs:
                 "domain_regex":   (if (.rgx | length) > 0 then .rgx else null end)
               } | with_entries(select(.value != null))
             ]
-          }' "$file" > tmp_singbox.json
+          }
+          ' "$file" > tmp_singbox.json
           
           # Компиляция целевого бинарного файла
           sing-box rule-set compile tmp_singbox.json --output "${{ inputs.output_path }}/${name}.srs"
