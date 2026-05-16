@@ -27,10 +27,8 @@ runs:
           echo "=> [Plain text] Завершено форматирование (${name}.txt)"
         }
 
-         # Создание выходной директории
         mkdir -p "${{ inputs.output_path }}"
         
-        # Маршрутизация обработки (директория или одиночный файл)
         if [ -d "${{ inputs.input_path }}" ]; then
           for f in "${{ inputs.input_path }}"/*.txt; do [ -f "$f" ] && process_file "$f"; done
         elif [ -f "${{ inputs.input_path }}" ]; then
