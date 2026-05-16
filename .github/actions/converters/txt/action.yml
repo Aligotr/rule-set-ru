@@ -22,7 +22,7 @@ runs:
           [ -s "$file" ] || return 0
 
           # Удаление технических префиксов (оставление исключительно доменов и правил)
-          sed -E 's/^(full|keyword|regexp)://' "$file" > "${{ inputs.output_path }}/${name}.txt"
+          sed -E 's/^(domain|full|keyword|regexp)://' "$file" > "${{ inputs.output_path }}/${name}.txt"
           
           echo "=> [Plain text] Завершено форматирование (${name}.txt)"
         }
