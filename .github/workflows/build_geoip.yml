@@ -7,72 +7,358 @@ jobs:
     runs-on: ubuntu-latest
     env:
       CURL: "curl -fsSL --retry 3 --retry-delay 2 --retry-connrefused"
+      CONFIG_PATH: .github/geoip.yml
+      GEOIP_PATH: geoip
       OUTPUT_PATH: output
+      OUTPUT_TEXT_PATH: output/text
+      STAGING_PATH: staging
 
     steps:
-      # Install dependencies
-      - name: Checkout
+      - name: Checkout User Codebase
         uses: actions/checkout@v4
 
       - name: Checkout Loyalsoldier/geoip
         uses: actions/checkout@v4
         with:
           repository: Loyalsoldier/geoip
-          path: geoip
+          path: ${{ env.GEOIP_PATH }}
 
-      - name: Set up Go
+      # Инициализация базовой среды
+      - name: Setup Go Environment
         uses: actions/setup-go@v5
         with:
-          go-version-file: geoip/go.mod
-          cache-dependency-path: geoip/go.sum
+          go-version-file: ${{ env.GEOIP_PATH }}/go.mod
+          cache-dependency-path: ${{ env.GEOIP_PATH }}/go.sum
 
-      # Build
+      - name: Setup YQ Environment
+        run: |
+          # Установка YAML-парсера для чтения конфигурации сборки
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+      - name: Initialize Workspace
+        run: |
+          # Выделение базовых директорий для рабочего процесса
+          mkdir -p \
+            "${{ env.GEOIP_PATH }}/geolite2" \
+            "${{ env.OUTPUT_PATH }}" \
+            "${{ env.OUTPUT_TEXT_PATH }}" \
+            "${{ env.STAGING_PATH }}"
+
+      # Подготовка правил
+      - name: Prepare GeoLite Sources
+        run: |
+          set -euo pipefail
+
+          # Загрузка ASN-данных GeoLite2
+          ${{ env.CURL }} --output-dir "./${{ env.GEOIP_PATH }}/geolite2" \
+            -O https://raw.githubusercontent.com/Loyalsoldier/geoip/release/GeoLite2-ASN-Blocks-IPv4.csv
+
+          echo "=> [GeoIP - Sources] ASN-данные GeoLite2 успешно загружены"
+
+      - name: Generate GeoIP Build Configuration
+        run: |
+          set -euo pipefail
+
+          ASN_PATH=$(yq -r '.asn_path' "${{ env.CONFIG_PATH }}")
+          IPS_PATH=$(yq -r '.ips_path' "${{ env.CONFIG_PATH }}")
+
+          resolve_asn_list() {
+            local name="$1"
+            local stack="$2"
+
+            if [[ "|$stack|" == *"|$name|"* ]]; then
+              echo "=> Warning [GeoIP - Config] Обнаружена циклическая зависимость в ASN-списке '$name'" >&2
+              return 0
+            fi
+
+            if [ -f "${ASN_PATH}/${name}.txt" ]; then
+              sed '
+                s/\r//g;
+                s/#.*//;
+                s/^[[:space:]]*//;
+                s/[[:space:]]*$//;
+                /^$/d
+              ' "${ASN_PATH}/${name}.txt"
+              return 0
+            fi
+
+            if yq -e ".asn_lists.\"$name\"" "${{ env.CONFIG_PATH }}" > /dev/null 2>&1; then
+              while read -r item; do
+                [ -n "$item" ] || continue
+                resolve_asn_list "$item" "$stack|$name"
+              done < <(yq -r ".asn_lists.\"$name\"[]" "${{ env.CONFIG_PATH }}")
+              return 0
+            fi
+          }
+
+          resolve_ip_list() {
+            local name="$1"
+            local stack="$2"
+
+            if [[ "|$stack|" == *"|$name|"* ]]; then
+              echo "=> Warning [GeoIP - Config] Обнаружена циклическая зависимость в IP-списке '$name'" >&2
+              return 0
+            fi
+
+            if [ -f "${IPS_PATH}/${name}.txt" ]; then
+              sed '
+                s/\r//g;
+                s/#.*//;
+                s/^[[:space:]]*//;
+                s/[[:space:]]*$//;
+                /^$/d
+              ' "${IPS_PATH}/${name}.txt"
+              return 0
+            fi
+
+            if yq -e ".sources.\"$name\"" "${{ env.CONFIG_PATH }}" > /dev/null 2>&1; then
+              return 0
+            fi
+
+            if yq -e ".ip_lists.\"$name\"" "${{ env.CONFIG_PATH }}" > /dev/null 2>&1; then
+              while read -r item; do
+                [ -n "$item" ] || continue
+                resolve_ip_list "$item" "$stack|$name"
+              done < <(yq -r ".ip_lists.\"$name\"[]" "${{ env.CONFIG_PATH }}")
+              return 0
+            fi
+          }
+
+          # Извлечение корневых списков из publish-конфигурации
+          ROOT_LISTS_JSON=$(yq -o=json '.publish | keys' "${{ env.CONFIG_PATH }}")
+
+          # Извлечение списка внешних blocked-источников
+          BLOCKED_SOURCES_JSON=$(yq -o=json '.sources.blocked' "${{ env.CONFIG_PATH }}")
+
+          # Формирование ASN wantedList-объекта по наличию ASN у root-списков
+          ASN_WANTED_LIST_FILE=$(mktemp)
+          echo '{}' > "$ASN_WANTED_LIST_FILE"
+
+          while read -r root; do
+            [ -n "$root" ] || continue
+
+            asn_json=$(resolve_asn_list "$root" "" | awk '!seen[$0]++' | jq -R . | jq -s .)
+
+            if [ "$(echo "$asn_json" | jq 'length')" -gt 0 ]; then
+              jq \
+                --arg key "$root" \
+                --argjson value "$asn_json" \
+                '. + {($key): $value}' \
+                "$ASN_WANTED_LIST_FILE" > "${ASN_WANTED_LIST_FILE}.tmp"
+
+              mv "${ASN_WANTED_LIST_FILE}.tmp" "$ASN_WANTED_LIST_FILE"
+              echo "=> [GeoIP - Config] ASN-данные для root-списка '$root' успешно подготовлены"
+            else
+              echo "=> [GeoIP - Config] ASN-данные для root-списка '$root' отсутствуют, список пропущен"
+            fi
+          done < <(yq -r '.publish | keys[]' "${{ env.CONFIG_PATH }}")
+
+          ASN_WANTED_LIST_JSON=$(cat "$ASN_WANTED_LIST_FILE")
+          rm -f "$ASN_WANTED_LIST_FILE"
+
+          # Формирование IP-массивов для root-списков
+          RU_WHITELIST_IP_JSON=$(resolve_ip_list "ru-whitelist" "" | awk '!seen[$0]++' | jq -R . | jq -s .)
+          RU_DIRECT_IP_JSON=$(resolve_ip_list "ru-direct" "" | awk '!seen[$0]++' | jq -R . | jq -s .)
+          RU_BLOCKED_IP_JSON=$(resolve_ip_list "ru-blocked" "" | awk '!seen[$0]++' | jq -R . | jq -s .)
+
+          # Формирование конфигурации сборки
+          jq -n \
+            --argjson root_lists "$ROOT_LISTS_JSON" \
+            --argjson blocked_sources "$BLOCKED_SOURCES_JSON" \
+            --argjson asn_wanted_list "$ASN_WANTED_LIST_JSON" \
+            --argjson ru_whitelist_ip "$RU_WHITELIST_IP_JSON" \
+            --argjson ru_direct_ip "$RU_DIRECT_IP_JSON" \
+            --argjson ru_blocked_ip "$RU_BLOCKED_IP_JSON" \
+            '
+            {
+              input: (
+                [
+                  $blocked_sources[] | {
+                    type: "text",
+                    action: "add",
+                    args: {
+                      name: "ru-blocked",
+                      uri: .
+                    }
+                  }
+                ]
+                + [
+                  {
+                    type: "maxmindGeoLite2ASNCSV",
+                    action: "add",
+                    args: {
+                      ipv4: "./geolite2/GeoLite2-ASN-Blocks-IPv4.csv",
+                      wantedList: $asn_wanted_list
+                    }
+                  },
+                  {
+                    type: "text",
+                    action: "add",
+                    args: {
+                      name: "ru-whitelist",
+                      ipOrCIDR: $ru_whitelist_ip
+                    }
+                  },
+                  {
+                    type: "text",
+                    action: "add",
+                    args: {
+                      name: "ru-direct",
+                      ipOrCIDR: $ru_direct_ip
+                    }
+                  },
+                  {
+                    type: "text",
+                    action: "add",
+                    args: {
+                      name: "ru-blocked",
+                      ipOrCIDR: $ru_blocked_ip
+                    }
+                  },
+                  {
+                    type: "private",
+                    action: "add"
+                  },
+                  {
+                    type: "text",
+                    action: "remove",
+                    args: {
+                      name: "private",
+                      ipOrCIDR: [
+                        "0.0.0.0/8",
+                        "::/128"
+                      ]
+                    }
+                  }
+                ]
+              ),
+              output: [
+                {
+                  type: "v2rayGeoIPDat",
+                  action: "output",
+                  args: {
+                    outputDir: "output",
+                    outputName: "geoip.dat",
+                    onlyIPType: "ipv4"
+                  }
+                },
+                {
+                  type: "singboxSRS",
+                  action: "output",
+                  args: {
+                    outputName: "geoip.dat",
+                    onlyIPType: "ipv4",
+                    wantedList: $root_lists
+                  }
+                },
+                {
+                  type: "mihomoMRS",
+                  action: "output",
+                  args: {
+                    onlyIPType: "ipv4",
+                    wantedList: $root_lists
+                  }
+                },
+                {
+                  type: "text",
+                  action: "output",
+                  args: {
+                    onlyIPType: "ipv4",
+                    wantedList: $root_lists,
+                    outputDir: "output/shadowrocket",
+                    outputExtension: ".txt"
+                  }
+                }
+              ]
+            }
+            ' > geoip_v2ray_config.json
+
+          echo "=> [GeoIP - Config] Конфигурация сборки успешно сформирована"
+
       - name: Build GeoIP
         run: |
-          # Загрузка данных
-          mkdir -p ./geolite2
-          ${{ env.CURL }} --output-dir ./geolite2 -O https://raw.githubusercontent.com/Loyalsoldier/geoip/release/GeoLite2-ASN-Blocks-IPv4.csv
+          set -euo pipefail
 
-          # Сборка
-          go build -C geoip .
-          geoip/geoip convert -c geoip_v2ray_config.json
+          # Сборка бинарного инструмента
+          go build -C "${{ env.GEOIP_PATH }}" .
 
-          # Перемещение результатов
+          # Выполнение сборки по конфигурации
+          "${{ env.GEOIP_PATH }}/geoip" convert -c geoip_v2ray_config.json
+
+          echo "=> [GeoIP - Build] Сборка GeoIP завершена"
+
+      - name: Prepare Staging Subsystem
+        run: |
+          set -euo pipefail
+
+          # Выделение буферной директории для переименования промежуточных файлов
+          mkdir -p "${{ env.STAGING_PATH }}"
+
+          # Копирование и переименование целевых файлов по конфигурации publish
           process_files() {
-            local dir=$1
-            local ext=$2
+            local dir="$1"
+            local ext="$2"
 
-            # ru-blocked -> geoip_proxy
-            if [ -f "output/$dir/ru-blocked.$ext" ]; then
-              mv "output/$dir/ru-blocked.$ext" "output/geoip_proxy.$ext"
+            if [ ! -d "output/$dir" ]; then
+              return 0
             fi
 
-            # ru-whitelist -> geoip_whitelist
-            if [ -f "output/$dir/ru-whitelist.$ext" ]; then
-              mv "output/$dir/ru-whitelist.$ext" "output/geoip_direct.$ext"
-            fi
+            while IFS='=' read -r src_tag public_name; do
+              src_file="output/$dir/${src_tag}.${ext}"
+              [ -f "$src_file" ] || continue
 
-            # * -> geoip_*
-            for f in output/$dir/*.$ext; do
-              if [ -f "$f" ]; then
-                mv "$f" "output/geoip_$(basename "$f")"
-              fi
-            done
+              mv "$src_file" "${{ env.OUTPUT_PATH }}/${public_name}.${ext}"
+              echo "=> [GeoIP - Output] Файл '${src_tag}.${ext}' подготовлен как '${public_name}.${ext}'"
+            done < <(yq -r '.publish | to_entries[] | "\(.key)=\(.value)"' "${{ env.CONFIG_PATH }}")
 
-            # Очистка данных
-            rm -rf output/$dir/
+            rm -rf "output/$dir"
           }
 
           process_files "srs" "srs"
           process_files "mrs" "mrs"
-          process_files "text" "lst"
 
-          # Вывод списка итоговых данных
-          ls -lR ./output
+          # Копирование и переименование промежуточных текстовых файлов для Shadowrocket
+          if [ -d "output/shadowrocket" ]; then
+            while IFS='=' read -r src_tag public_name; do
+              src_file="output/shadowrocket/${src_tag}.txt"
+              [ -f "$src_file" ] || continue
 
-      # Uploading results
-      - name: Upload Artifacts
+              mv "$src_file" "${{ env.STAGING_PATH }}/${public_name}.txt"
+              echo "=> [GeoIP - Staging] Файл '${src_tag}.txt' подготовлен как '${public_name}.txt'"
+            done < <(yq -r '.publish | to_entries[] | "\(.key)=\(.value)"' "${{ env.CONFIG_PATH }}")
+
+            rm -rf "output/shadowrocket"
+          fi
+
+          if [ -f "output/geoip.dat" ]; then
+            mv "output/geoip.dat" "${{ env.OUTPUT_PATH }}/geoip.dat"
+            echo "=> [GeoIP - Output] Файл 'geoip.dat' сохранен"
+          fi
+
+      # Сборка
+      - name: Build Shadowrocket Rule-sets (_sr.list)
+        uses: ./.github/actions/geoip/converters/shadowrocket
+        with:
+          input_path: ${{ env.STAGING_PATH }}
+          output_path: ${{ env.OUTPUT_PATH }}
+
+      - name: Show Final Diagnostics
+        run: |
+          set -euo pipefail
+
+          echo "=> [GeoIP - Diagnostics] Финальное содержимое output"
+          find "${{ env.OUTPUT_PATH }}" -maxdepth 1 -type f | sort
+
+          echo "=> [GeoIP - Diagnostics] Финальное содержимое output/text"
+          find "${{ env.OUTPUT_TEXT_PATH }}" -maxdepth 1 -type f | sort || true
+
+          echo "=> [GeoIP - Diagnostics] Финальный размер output:"
+          du -sh "${{ env.OUTPUT_PATH }}"
+
+      # Загрузка результатов
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: geoip-output
-          path: output
+          path: output/
