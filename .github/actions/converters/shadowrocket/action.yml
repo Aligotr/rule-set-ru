@@ -26,7 +26,8 @@ runs:
             /^full:/ { print "DOMAIN," substr($0,6); next }
             /^keyword:/ { print "DOMAIN-KEYWORD," substr($0,9); next }
             /^regexp:/ { print "URL-REGEX," substr($0,8); next }
-            { print "DOMAIN-SUFFIX," $0 }
+            /^domain:/ { print "DOMAIN-SUFFIX," substr($0,8); next }
+            { print "DOMAIN-SUFFIX," $0 } # Fallback для доменов без префикса
           ' "$file" > "${{ inputs.output_path }}/${name}_sr.list"
           
           echo "=> [Shadowrocket] Завершено форматирование (${name}_sr.list)"
