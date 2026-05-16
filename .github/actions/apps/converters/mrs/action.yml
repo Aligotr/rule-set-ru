@@ -1,0 +1,80 @@
+name: Generate Mihomo App Ruleset
+description: Компиляция app-правил маршрутизации в форматы Mihomo YAML и MRS
+
+inputs:
+  input_path:
+    description: Директория или путь к исходному JSON-файлу
+    required: true
+  output_path:
+    description: Директория для сохранения результатов обработки
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Bootstrap Mihomo Compiler
+      shell: bash
+      run: |
+        # Проверка наличия компилятора в системе
+        if ! command -v mihomo &> /dev/null; then
+          echo "=> [Apps-MRS] Скачивание компилятора Mihomo..."
+          BIN_DIR="${RUNNER_TEMP}/rule_compilers"
+          mkdir -p "$BIN_DIR"
+
+          MIHOMO_URL=$(curl -s https://api.github.com/repos/MetaCubeX/mihomo/releases/latest | jq -r '.assets[] | select(.name | contains("linux-amd64") and endswith(".gz")) | .browser_download_url' | head -n 1)
+          curl -sL "$MIHOMO_URL" | gunzip > "$BIN_DIR/mihomo"
+          chmod +x "$BIN_DIR/mihomo"
+
+          echo "$BIN_DIR" >> $GITHUB_PATH
+          export PATH="$BIN_DIR:$PATH"
+          echo "=> [Apps-MRS] Установка Mihomo завершена"
+        else
+          echo "=> [Apps-MRS] Использование существующего компилятора Mihomo"
+        fi
+
+    - name: Compile Apps MRS
+      shell: bash
+      run: |
+        process_file() {
+          local file="$1"
+          local name="$(basename "$file" .json)"
+
+          [ -s "$file" ] || return 0
+
+          yaml_file="${{ inputs.output_path }}/${name}.yaml"
+          tmp_yaml="${RUNNER_TEMP}/${name}.yaml"
+
+          # Формирование YAML-манифеста правил
+          echo "payload:" > "$tmp_yaml"
+
+          jq -r '
+            [
+              .rules[]? | .rules[]? | select(.process_name != null) | .process_name[]
+            ]
+            | unique[]
+            | "  - PROCESS-NAME," + .
+          ' "$file" >> "$tmp_yaml"
+
+          jq -r '
+            [
+              .rules[]? | .rules[]? | select(.package_name != null) | .package_name[]
+            ]
+            | unique[]
+            | "  - PACKAGE-NAME," + .
+          ' "$file" >> "$tmp_yaml"
+
+          # Сохранение YAML-файла и компиляция MRS-файла
+          cp "$tmp_yaml" "$yaml_file"
+          mihomo convert-ruleset classical yaml "$tmp_yaml" "${{ inputs.output_path }}/${name}.mrs"
+          rm -f "$tmp_yaml"
+
+          echo "=> [Apps-MRS] Завершено форматирование (${name}.yaml, ${name}.mrs)"
+        }
+
+        mkdir -p "${{ inputs.output_path }}"
+
+        if [ -d "${{ inputs.input_path }}" ]; then
+          for f in "${{ inputs.input_path }}"/*.json; do [ -f "$f" ] && process_file "$f"; done
+        elif [ -f "${{ inputs.input_path }}" ]; then
+          process_file "${{ inputs.input_path }}"
+        fi
