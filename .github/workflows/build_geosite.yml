@@ -8,6 +8,7 @@ jobs:
     env:
       CONFIG_PATH: .github/geosite.yml
       DATA_PATH: community/data
+      RAW_BUILD_DATA_PATH: build-data-raw
       BUILD_DATA_PATH: build-data
       OUTPUT_PATH: output
       OUTPUT_TEXT_PATH: output/text
@@ -40,6 +41,7 @@ jobs:
         run: |
           # Выделение базовых директорий для рабочего процесса
           mkdir -p \
+            "${{ env.RAW_BUILD_DATA_PATH }}" \
             "${{ env.BUILD_DATA_PATH }}" \
             "${{ env.OUTPUT_PATH }}" \
             "${{ env.OUTPUT_TEXT_PATH }}" \
@@ -151,57 +153,66 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Очистка директории минимального дерева правил
-          rm -rf "${{ env.BUILD_DATA_PATH }}"
-          mkdir -p "${{ env.BUILD_DATA_PATH }}"
+          # Очистка директории минималь��ого дерева правил
+          rm -rf "${{ env.RAW_BUILD_DATA_PATH }}" "${{ env.BUILD_DATA_PATH }}"
+          mkdir -p "${{ env.RAW_BUILD_DATA_PATH }}" "${{ env.BUILD_DATA_PATH }}"
 
-          # Инициализация словаря посещенных файлов
-          declare -A VISITED=()
-
-          resolve_file() {
+          flatten_file() {
             local name="$1"
+            local stack="$2"
             local file="${{ env.DATA_PATH }}/$name"
-
-            if [ -n "${VISITED[$name]:-}" ]; then
-              return 0
-            fi
 
             if [ ! -f "$file" ]; then
               echo "=> Warning [Resolver] Файл '$name' не найден в исходной директории правил"
               return 0
             fi
 
-            VISITED["$name"]=1
-            cp "$file" "${{ env.BUILD_DATA_PATH }}/$name"
-            echo "=> [Resolver] Файл '$name' добавлен в минимальное дерево"
+            if [[ "|$stack|" == *"|$name|"* ]]; then
+              echo "=> Warning [Resolver] Обнаружена циклическая зависимость в списке '$name'"
+              return 0
+            fi
 
-            while read -r inc; do
-              [ -n "$inc" ] || continue
-              resolve_file "$inc"
-            done < <(sed -n 's/^[[:space:]]*include:\([^[:space:]#@][^[:space:]#]*\).*/\1/p' "$file")
+            while IFS= read -r line || [ -n "$line" ]; do
+              case "$line" in
+                include:*)
+                  inc="${line#include:}"
+                  inc="${inc%% *}"
+                  [ -n "$inc" ] || continue
+                  flatten_file "$inc" "$stack|$name"
+                  ;;
+                *)
+                  printf '%s\n' "$line"
+                  ;;
+              esac
+            done < "$file"
           }
 
           # Извлечение корневых тегов из publish-конфигурации
           while read -r root; do
             [ -n "$root" ] || continue
-            resolve_file "$root"
+            flatten_file "$root" "" > "${{ env.RAW_BUILD_DATA_PATH }}/$root"
+            echo "=> [Resolver] Root-список '$root' собран в raw-формате"
           done < <(yq -r '.publish | keys[]' "${{ env.CONFIG_PATH }}")
 
           # Извлечение дополнительных тегов expose-конфигурации
           while read -r root; do
             [ -n "$root" ] || continue
-            resolve_file "$root"
+            flatten_file "$root" "" > "${{ env.RAW_BUILD_DATA_PATH }}/$root"
+            echo "=> [Resolver] Expose-список '$root' собран в raw-формате"
           done < <(yq -r '.expose[]?' "${{ env.CONFIG_PATH }}")
 
           # Подготовка списка экспорта для текстовых файлов
           EXPORT_LISTS=$(yq -r '.publish | keys | join(",")' "${{ env.CONFIG_PATH }}")
           echo "EXPORT_LISTS=$EXPORT_LISTS" >> "$GITHUB_ENV"
 
-          # Логирование итогового набора включенных тегов
-          printf '%s\n' "${!VISITED[@]}" | sort > resolved_rules.txt
-
           echo "=> [Resolver] Минимальное дерево правил сформировано"
-          cat resolved_rules.txt
+
+      - name: Normalize flattened rule-lists
+        uses: ./.github/actions/normalize
+        with:
+          input_path: ${{ env.RAW_BUILD_DATA_PATH }}
+          output_path: ${{ env.BUILD_DATA_PATH }}
+          dedupe: "true"
 
       - name: Show Resolver Diagnostics
         run: |
@@ -234,7 +245,6 @@ jobs:
           cd ..
 
           rm -f "${{ env.OUTPUT_PATH }}/gfwlist.txt"
-          rm -f resolved_rules.txt
           echo "=> [DAT] Сборка geosite.dat завершена"
 
       - name: Show Build Diagnostics
@@ -269,16 +279,6 @@ jobs:
 
             echo "=> [Staging] Файл '$src_tag.txt' подготовлен как '${public_name}.txt'"
           done < <(yq -r '.publish | to_entries[] | "\(.key)=\(.value)"' "${{ env.CONFIG_PATH }}")
-
-      - name: Show Staging Diagnostics
-        run: |
-          set -euo pipefail
-
-          echo "=> [Diagnostics] Содержимое staging"
-          find "${{ env.STAGING_PATH }}" -maxdepth 1 -type f | sort || true
-
-          echo "=> [Diagnostics] Содержимое output/text"
-          find "${{ env.OUTPUT_TEXT_PATH }}" -maxdepth 1 -type f | sort || true
 
       # Сборка
       - name: Build Plain Text Lists (.txt)
