@@ -1,5 +1,5 @@
 name: Generate Sing-box Ruleset
-description: Парсинг и компиляция списков в бинарный формат Sing-box (.srs)
+description: Компиляция правил маршрутизации в бинарный формат Sing-box (.srs)
 
 inputs:
   input_path:
@@ -20,12 +20,12 @@ runs:
           echo "=> [SRS] Скачивание компилятора Sing-box..."
           BIN_DIR="${RUNNER_TEMP}/rule_compilers"
           mkdir -p "$BIN_DIR"
-          
+
           SB_URL=$(curl -s https://api.github.com/repos/SagerNet/sing-box/releases/latest | jq -r '.assets[] | select(.name | contains("linux-amd64.tar.gz")) | .browser_download_url')
-          # Извлечение только бинарного файла из архива
           curl -sL "$SB_URL" | tar -xz --strip-components=1 -C "$BIN_DIR" --wildcards "*/sing-box"
-          
+
           echo "$BIN_DIR" >> $GITHUB_PATH
+          export PATH="$BIN_DIR:$PATH"
           echo "=> [SRS] Установка Sing-box завершена"
         else
           echo "=> [SRS] Использование существующего компилятора Sing-box"
@@ -37,40 +37,48 @@ runs:
         process_file() {
           local file="$1"
           local name="$(basename "$file" .txt)"
-          
+
+          # Исключение пустых файлов
           [ -s "$file" ] || return 0
 
           # Формирование JSON структуры
           jq -Rn '
-          # Распределение правил по массивам JSON-объекта
-          reduce inputs as $line (
-            { sfx:[], dom:[], kwd:[], rgx:[] };
-            
-            if ($line | length == 0) then .
-            elif ($line | startswith("full:")) then .dom += [$line[5:]]
-            elif ($line | startswith("keyword:")) then .kwd += [$line[8:]]
-            elif ($line | startswith("regexp:")) then .rgx += [$line[7:]]
-            elif ($line | startswith("domain:")) then .sfx += [$line[7:]]
-            else .sfx += [$line]
-            end
-          ) | 
-          {
-            "version": 1,
-            "rules": [
-              {
-                "domain_suffix":  (if (.sfx | length) > 0 then .sfx else null end),
-                "domain":         (if (.dom | length) > 0 then .dom else null end),
-                "domain_keyword": (if (.kwd | length) > 0 then .kwd else null end),
-                "domain_regex":   (if (.rgx | length) > 0 then .rgx else null end)
-              } | with_entries(select(.value != null))
-            ]
-          }
+            def strip_attr:
+              sub(" @[A-Za-z0-9_-]+$"; "");
+
+            reduce inputs as $line (
+              # Распределение правил по массивам JSON-объекта
+              { sfx:[], dom:[], kwd:[], rgx:[] };
+
+              if ($line | length == 0) then .
+              else
+                ($line | strip_attr) as $v
+                | if ($v | startswith("full:")) then .dom += [$v[5:]]
+                  elif ($v | startswith("keyword:")) then .kwd += [$v[8:]]
+                  elif ($v | startswith("regexp:")) then .rgx += [$v[7:]]
+                  elif ($v | startswith("domain:")) then .sfx += [$v[7:]]
+                  else .sfx += [$v]
+                  end
+              end
+            )
+            | {
+                version: 1,
+                rules: [
+                  (
+                    {}
+                    + (if (.sfx | length) > 0 then {domain_suffix: .sfx} else {} end)
+                    + (if (.dom | length) > 0 then {domain: .dom} else {} end)
+                    + (if (.kwd | length) > 0 then {domain_keyword: .kwd} else {} end)
+                    + (if (.rgx | length) > 0 then {domain_regex: .rgx} else {} end)
+                  )
+                ]
+              }
           ' "$file" > tmp_singbox.json
-          
+
           # Компиляция целевого бинарного файла
           sing-box rule-set compile tmp_singbox.json --output "${{ inputs.output_path }}/${name}.srs"
           rm -f tmp_singbox.json
-          
+
           echo "=> [SRS] Завершено форматирование (${name}.srs)"
         }
 
