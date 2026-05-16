@@ -1,26 +1,3 @@
-roots:
-  - ru-whitelist
-  - ru-direct
-  - ru-blocked
-  - category-ads-all
-
-publish:
-  dat:
-    - ru-whitelist
-    - ru-direct
-    - ru-blocked
-    - category-ads-all
-    - youtube
-    - telegram
-
-  text:
-    ru-whitelist: geosite_whitelist
-    ru-direct: geosite_direct
-    ru-blocked: geosite_proxy
-    category-ads-all: geosite_block
-    youtube: geosite_youtube
-    telegram: geosite_telegram
-
 lists:
   ru-whitelist:
     - vk
@@ -31,20 +8,25 @@ lists:
     - category-gov-ru
     - x5
     - bitwarden
-    - gosuslugi
 
   ru-blocked:
     - ext-antifilter
     - ext-refilter
     - youtube
-    - telegram
     - discord
     - instagram
+    - telegram
     - jetbrains
 
   category-ads-all:
     - ext-winspy
     - ext-adguard
+
+publish:
+  ru-whitelist: geosite_whitelist
+  ru-direct: geosite_direct
+  ru-blocked: geosite_proxy
+  category-ads-all: geosite_block
 
 externals:
   ext-winspy:
@@ -64,17 +46,10 @@ externals:
     format: plain
 
 local_routing:
-  direct:
-    target: ru-direct
-  white:
-    target: ru-direct
-  proxy:
-    target: ru-blocked
-  block:
-    target: ru-blocked
-  black:
-    target: ru-blocked
-  ads:
-    target: category-ads-all
-  spy:
-    target: category-ads-all
+  direct: ru-direct
+  white: ru-direct
+  proxy: ru-blocked
+  block: ru-blocked
+  black: ru-blocked
+  ads: category-ads-all
+  spy: category-ads-all
