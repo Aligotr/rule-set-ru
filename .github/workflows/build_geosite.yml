@@ -54,8 +54,8 @@ jobs:
 
           # Загрузка внешних списков по конфигурации
           while read -r name; do
-            url=$(yq -r ".externals.\"$name\".url" "${{ env.CONFIG_PATH }}")
-            format=$(yq -r ".externals.\"$name\".format" "${{ env.CONFIG_PATH }}")
+            url=$(yq -r ".sources.\"$name\".url" "${{ env.CONFIG_PATH }}")
+            format=$(yq -r ".sources.\"$name\".format" "${{ env.CONFIG_PATH }}")
 
             echo "=> [External - Rules] Загрузка списка '$name'"
 
@@ -79,81 +79,76 @@ jobs:
             esac
 
             echo "=> [External - Rules] Список '$name' успешно сохранен"
-          done < <(yq -r '.externals | keys[]' "${{ env.CONFIG_PATH }}")
+          done < <(yq -r '.sources | keys[]' "${{ env.CONFIG_PATH }}")
 
-      - name: Create custom-lists from EXTERNAL rule-lists
+      - name: Create custom-lists from CONFIG rule-lists
         run: |
           set -euo pipefail
 
+          COUNTRY_CODE=$(yq -r '.country_code' "${{ env.CONFIG_PATH }}")
+
+          make_internal_name() {
+            local name="$1"
+
+            case "$name" in
+              whitelist|direct|blocked)
+                printf '%s-%s\n' "$COUNTRY_CODE" "$name"
+                ;;
+              *)
+                printf '%s\n' "$name"
+                ;;
+            esac
+          }
+
           # Формирование пользовательских meta-списков по конфигурации
-          while read -r list_name; do
-            out="${{ env.DATA_PATH }}/$list_name"
+          while read -r logical_name; do
+            [ -n "$logical_name" ] || continue
+
+            internal_name=$(make_internal_name "$logical_name")
+            out="${{ env.DATA_PATH }}/$internal_name"
             : > "$out"
 
             while read -r item; do
               [ -n "$item" ] || continue
-              echo "include:$item" >> "$out"
-            done < <(yq -r ".lists.\"$list_name\"[]" "${{ env.CONFIG_PATH }}")
+              include_name=$(make_internal_name "$item")
+              echo "include:$include_name" >> "$out"
+            done < <(yq -r ".community_lists.\"$logical_name\"[]" "${{ env.CONFIG_PATH }}")
 
-            echo "=> [External - Rules] Список '$list_name' успешно сформирован"
-          done < <(yq -r '.lists | keys[]' "${{ env.CONFIG_PATH }}")
+            while read -r item; do
+              [ -n "$item" ] || continue
 
-      - name: Create custom-lists from LOCAL rule-lists
-        run: |
-          set -euo pipefail
-
-          # Проверка наличия директории domains/ перед итерацией
-          if [ -d "domains" ]; then
-
-            declare -A ROUTE_MAP=()
-
-            while read -r key; do
-              ROUTE_MAP["$key"]="$(yq -r ".local_routing.\"$key\"" "${{ env.CONFIG_PATH }}")"
-            done < <(yq -r '.local_routing | keys[]' "${{ env.CONFIG_PATH }}")
-
-            # Извлечение всех ключей словаря для логирования
-            # Замена пробелов на запятые для читабельного вывода
-            ALL_KEYS=$(printf "%s\n" "${!ROUTE_MAP[@]}" | paste -sd ", " -)
-
-            for file in domains/*.txt; do
-              # Пропуск шага в случае отсутствия текстовых файлов
-              [ -e "$file" ] || continue
-
-              # Извлечение базового имени файла (например, "a-direct")
-              fname=$(basename "$file" .txt)
-
-              # Копирование файла в рабочую среду генератора V2Ray
-              cp "$file" "${{ env.DATA_PATH }}/loc-$fname"
-
-              matched=false
-
-              # Эвристическое распределение (Назначение маршрута на основе ключевых слов в имени)
-              # Итерация по всем ключам словаря для поиска совпадений в имени файла
-              for key in "${!ROUTE_MAP[@]}"; do
-                if [[ "$fname" == *"$key"* ]]; then
-                  # Извлечение целевого списка из словаря
-                  dest="${ROUTE_MAP[$key]}"
-
-                  echo "include:loc-$fname" >> "${{ env.DATA_PATH }}/$dest"
-                  echo "=> [Local - Rules] Файл '$fname' содержит ключ '$key', добавлен в список <$dest>"
-
-                  matched=true
-                  break # Остановка поиска при первом найденном совпадении
-                fi
-              done
-
-              # Обработка файлов без совпадений
-              if [ "$matched" = false ]; then
-                echo "=> Warning [Local - Rules] Локальный файл $fname пропущен, в названии отсутствуют допустимые ключи маршрутизации: $ALL_KEYS"
+              if [ -f "domains/${item}.txt" ]; then
+                cp "domains/${item}.txt" "${{ env.DATA_PATH }}/${item}"
+                echo "include:${item}" >> "$out"
+                echo "=> [Local - Rules] Файл '${item}.txt' добавлен в список <$internal_name>"
+              else
+                echo "=> Warning [Local - Rules] Локальный файл '${item}.txt' не найден"
               fi
-            done
-          fi
+            done < <(yq -r ".local_lists.\"$logical_name\"[]" "${{ env.CONFIG_PATH }}")
+
+            echo "=> [Config - Rules] Список '$internal_name' успешно сформирован"
+          done < <(yq -r '.publish | keys[]' "${{ env.CONFIG_PATH }}")
 
       - name: Resolve minimal V2Ray data-tree
         run: |
           set -euo pipefail
 
-          # Очистка директории минималь��ого дерева правил
+          COUNTRY_CODE=$(yq -r '.country_code' "${{ env.CONFIG_PATH }}")
+
+          make_internal_name() {
+            local name="$1"
+
+            case "$name" in
+              whitelist|direct|blocked)
+                printf '%s-%s\n' "$COUNTRY_CODE" "$name"
+                ;;
+              *)
+                printf '%s\n' "$name"
+                ;;
+            esac
+          }
+
+          # Очистка директории минимального дерева правил
           rm -rf "${{ env.RAW_BUILD_DATA_PATH }}" "${{ env.BUILD_DATA_PATH }}"
           mkdir -p "${{ env.RAW_BUILD_DATA_PATH }}" "${{ env.BUILD_DATA_PATH }}"
 
@@ -190,19 +185,21 @@ jobs:
           # Извлечение корневых тегов из publish-конфигурации
           while read -r root; do
             [ -n "$root" ] || continue
-            flatten_file "$root" "" > "${{ env.RAW_BUILD_DATA_PATH }}/$root"
-            echo "=> [Resolver] Root-список '$root' собран в raw-формате"
+            internal_root=$(make_internal_name "$root")
+            flatten_file "$internal_root" "" > "${{ env.RAW_BUILD_DATA_PATH }}/$internal_root"
+            echo "=> [Resolver] Root-список '$internal_root' собран в raw-формате"
           done < <(yq -r '.publish | keys[]' "${{ env.CONFIG_PATH }}")
 
-          # Извлечение дополнительных тегов expose-конфигурации
+          # Извлечение дополнительных community-тегов expose-конфигурации
           while read -r root; do
             [ -n "$root" ] || continue
-            flatten_file "$root" "" > "${{ env.RAW_BUILD_DATA_PATH }}/$root"
-            echo "=> [Resolver] Expose-список '$root' собран в raw-формате"
-          done < <(yq -r '.expose[]?' "${{ env.CONFIG_PATH }}")
+            internal_root=$(make_internal_name "$root")
+            flatten_file "$internal_root" "" > "${{ env.RAW_BUILD_DATA_PATH }}/$internal_root"
+            echo "=> [Resolver] Community-список '$internal_root' собран в raw-формате"
+          done < <(yq -r '.community_expose[]?' "${{ env.CONFIG_PATH }}")
 
           # Подготовка списка экспорта для текстовых файлов
-          EXPORT_LISTS=$(yq -r '.publish | keys | join(",")' "${{ env.CONFIG_PATH }}")
+          EXPORT_LISTS=$(while read -r root; do make_internal_name "$root"; done < <(yq -r '.publish | keys[]' "${{ env.CONFIG_PATH }}") | paste -sd "," -)
           echo "EXPORT_LISTS=$EXPORT_LISTS" >> "$GITHUB_ENV"
 
           echo "=> [Resolver] Минимальное дерево правил сформировано"
@@ -228,8 +225,8 @@ jobs:
           echo "=> [Diagnostics] Список корневых тегов publish"
           yq -r '.publish | keys[]' "${{ env.CONFIG_PATH }}"
 
-          echo "=> [Diagnostics] Список дополнительных тегов expose"
-          yq -r '.expose[]?' "${{ env.CONFIG_PATH }}" || true
+          echo "=> [Diagnostics] Список дополнительных community-тегов"
+          yq -r '.community_expose[]?' "${{ env.CONFIG_PATH }}" || true
 
           echo "=> [Diagnostics] Значение EXPORT_LISTS: ${EXPORT_LISTS}"
 
@@ -247,46 +244,41 @@ jobs:
           rm -f "${{ env.OUTPUT_PATH }}/gfwlist.txt"
           echo "=> [DAT] Сборка geosite.dat завершена"
 
-      - name: Show Build Diagnostics
-        run: |
-          set -euo pipefail
-
-          echo "=> [Diagnostics] Содержимое output"
-          find "${{ env.OUTPUT_PATH }}" -maxdepth 1 -type f | sort
-
-          if [ -f "${{ env.OUTPUT_PATH }}/geosite.dat" ]; then
-            echo "=> [Diagnostics] Размер geosite.dat:"
-            ls -lh "${{ env.OUTPUT_PATH }}/geosite.dat"
-          fi
-
-          echo "=> [Diagnostics] Размер output:"
-          du -sh "${{ env.OUTPUT_PATH }}"
-
       - name: Prepare Staging Subsystem
         run: |
           set -euo pipefail
+
+          COUNTRY_CODE=$(yq -r '.country_code' "${{ env.CONFIG_PATH }}")
+
+          make_internal_name() {
+            local name="$1"
+
+            case "$name" in
+              whitelist|direct|blocked)
+                printf '%s-%s\n' "$COUNTRY_CODE" "$name"
+                ;;
+              *)
+                printf '%s\n' "$name"
+                ;;
+            esac
+          }
 
           # Выделение буферной директории для переименования исходников
           mkdir -p "${{ env.STAGING_PATH }}"
 
           # Копирование целевых текстовых файлов с применением финальных публичных имен конфигурации
           while IFS='=' read -r src_tag public_name; do
-            src_file="${{ env.OUTPUT_PATH }}/${src_tag}.txt"
+            internal_name=$(make_internal_name "$src_tag")
+            src_file="${{ env.OUTPUT_PATH }}/${internal_name}.txt"
             [ -f "$src_file" ] || continue
 
             cp "$src_file" "${{ env.STAGING_PATH }}/${public_name}.txt"
             mv "$src_file" "${{ env.OUTPUT_TEXT_PATH }}/${public_name}.txt"
 
-            echo "=> [Staging] Файл '$src_tag.txt' подготовлен как '${public_name}.txt'"
+            echo "=> [Staging] Файл '${internal_name}.txt' подготовлен как '${public_name}.txt'"
           done < <(yq -r '.publish | to_entries[] | "\(.key)=\(.value)"' "${{ env.CONFIG_PATH }}")
 
       # Сборка
-      # - name: Build Plain Text Lists (.txt)
-      #   uses: ./.github/actions/converters/txt
-      #   with:
-      #     input_path: ${{ env.STAGING_PATH }}
-      #     output_path: ${{ env.OUTPUT_PATH }}
-
       - name: Build Shadowrocket Rule-sets (_sr.list)
         uses: ./.github/actions/converters/shadowrocket
         with:
