@@ -1,0 +1,48 @@
+name: Generate Apps YAML
+description: Формирование app-правил маршрутизации в формат YAML
+
+inputs:
+  input_path:
+    description: Директория или путь к исходному JSON-файлу
+    required: true
+  output_path:
+    description: Директория для сохранения результатов обработки
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Compile Apps YAML
+      shell: bash
+      run: |
+        process_file() {
+          local file="$1"
+          local name="$(basename "$file" .json)"
+
+          [ -s "$file" ] || return 0
+
+          # Формирование YAML-манифеста правил
+          echo "payload:" > "${{ inputs.output_path }}/${name}.yaml"
+
+          jq -r '
+            [.rules[] | .rules[] | select(.process_name != null) | .process_name[]]
+            | unique[]
+            | "  - PROCESS-NAME," + .
+          ' "$file" >> "${{ inputs.output_path }}/${name}.yaml"
+
+          jq -r '
+            [.rules[] | .rules[] | select(.package_name != null) | .package_name[]]
+            | unique[]
+            | "  - PACKAGE-NAME," + .
+          ' "$file" >> "${{ inputs.output_path }}/${name}.yaml"
+
+          echo "=> [Apps-YAML] Завершено форматирование (${name}.yaml)"
+        }
+
+        mkdir -p "${{ inputs.output_path }}"
+
+        if [ -d "${{ inputs.input_path }}" ]; then
+          for f in "${{ inputs.input_path }}"/*.json; do [ -f "$f" ] && process_file "$f"; done
+        elif [ -f "${{ inputs.input_path }}" ]; then
+          process_file "${{ inputs.input_path }}"
+        fi
