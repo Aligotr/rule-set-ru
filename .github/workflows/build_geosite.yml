@@ -141,6 +141,7 @@ jobs:
                     --outputpath="../${{ env.OUTPUT_PATH }}" \
                     --exportlists=ru-direct,ru-blocked,category-ads-all
           cd ..
+          rm -f "${{ env.OUTPUT_PATH }}/gfwlist.txt"
 
       - name: Prepare Staging Subsystem
         run: |
