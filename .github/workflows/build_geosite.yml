@@ -6,10 +6,13 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
+      CONFIG_PATH: .github/geosite.yml
       DLC_PATH: dlc
       DATA_PATH: community/data
+      BUILD_DATA_PATH: build-data
       OUTPUT_PATH: output
       OUTPUT_TEXT_PATH: output/text
+      STAGING_PATH: staging
 
     steps:
       - name: Checkout User Codebase
@@ -34,75 +37,92 @@ jobs:
           go-version-file: ${{ env.DLC_PATH }}/go.mod
           cache-dependency-path: ${{ env.DLC_PATH }}/go.sum
 
+      - name: Setup YQ Environment
+        run: |
+          # Установка YAML-парсера для чтения конфигурации сборки
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
       - name: Initialize Workspace
         run: |
           # Выделение базовых директорий для рабочего процесса
-          mkdir -p ${{ env.OUTPUT_PATH }} ${{ env.OUTPUT_TEXT_PATH }}
+          mkdir -p \
+            "${{ env.BUILD_DATA_PATH }}" \
+            "${{ env.OUTPUT_PATH }}" \
+            "${{ env.OUTPUT_TEXT_PATH }}" \
+            "${{ env.STAGING_PATH }}"
 
       # Подготовка правил
       - name: Ingress External Data into V2Ray
         run: |
-          # Spy
-          curl -sSL "https://raw.githubusercontent.com/crazy-max/WindowsSpyBlocker/master/data/hosts/spy.txt" | \
-          grep "0.0.0.0" | awk '{print $2}' > ${{ env.DATA_PATH }}/ext-winspy
-          
-          # AdGuard
-          curl -sSL "https://adguardteam.github.io/AdGuardSDNSFilter/Filters/filter.txt" | \
-          perl -ne '/^\|\|([-_0-9a-zA-Z]+(\.[-_0-9a-zA-Z]+){1,64})\^$/ && print "$1\n"' | \
-          perl -ne 'print if not /^[0-9]{1,3}(\.[0-9]{1,3}){3}$/' | grep -vi "t.co" > ${{ env.DATA_PATH }}/ext-adguard
+          set -euo pipefail
 
-          # Proxy
-          curl -sSL "https://community.antifilter.download/list/domains.lst" > ${{ env.DATA_PATH }}/ext-antifilter
-          curl -sSL "https://raw.githubusercontent.com/1andrevich/Re-filter-lists/main/domains_all.lst" > ${{ env.DATA_PATH }}/ext-refilter
+          # Загрузка внешних списков по конфигурации
+          while read -r name; do
+            url=$(yq -r ".externals.\"$name\".url" "${{ env.CONFIG_PATH }}")
+            format=$(yq -r ".externals.\"$name\".format" "${{ env.CONFIG_PATH }}")
 
-      - name: Create custom-lists from EXTERNAL rule-lists 
+            echo "=> [External - Rules] Загрузка списка '$name'"
+
+            case "$format" in
+              plain)
+                curl -fsSL "$url" > "${{ env.DATA_PATH }}/$name"
+                ;;
+              hosts_0.0.0.0)
+                curl -fsSL "$url" | grep "0.0.0.0" | awk '{print $2}' > "${{ env.DATA_PATH }}/$name"
+                ;;
+              adguard_filter)
+                curl -fsSL "$url" | \
+                perl -ne '/^\|\|([-_0-9a-zA-Z]+(\.[-_0-9a-zA-Z]+){1,64})\^$/ && print "$1\n"' | \
+                perl -ne 'print if not /^[0-9]{1,3}(\.[0-9]{1,3}){3}$/' | \
+                grep -vi "t.co" > "${{ env.DATA_PATH }}/$name"
+                ;;
+              *)
+                echo "=> Warning [External - Rules] Неизвестный формат '$format' для списка '$name'"
+                exit 1
+                ;;
+            esac
+
+            echo "=> [External - Rules] Список '$name' успешно сохранен"
+          done < <(yq -r '.externals | keys[]' "${{ env.CONFIG_PATH }}")
+
+      - name: Create custom-lists from EXTERNAL rule-lists
         run: |
-          # External
-          # --- Whitelist ---
-          echo "include:vk" > ${{ env.DATA_PATH }}/ru-whitelist
-          echo "include:yandex" >> ${{ env.DATA_PATH }}/ru-whitelist
+          set -euo pipefail
 
-          # --- Direct ---
-          echo "include:ru-whitelist" > ${{ env.DATA_PATH }}/ru-direct
-          echo "include:category-gov-ru" >> ${{ env.DATA_PATH }}/ru-direct
-          echo "include:x5" >> ${{ env.DATA_PATH }}/ru-direct
-          echo "include:bitwarden" >> ${{ env.DATA_PATH }}/ru-direct
+          # Формирование пользовательских meta-списков по конфигурации
+          while read -r list_name; do
+            out="${{ env.DATA_PATH }}/$list_name"
+            : > "$out"
 
-          # --- Proxy ---
-          echo "include:ext-antifilter" > ${{ env.DATA_PATH }}/ru-blocked
-          echo "include:ext-refilter" >> ${{ env.DATA_PATH }}/ru-blocked
-          echo "include:youtube" >> ${{ env.DATA_PATH }}/ru-blocked
-          echo "include:discord" >> ${{ env.DATA_PATH }}/ru-blocked
-          echo "include:instagram" >> ${{ env.DATA_PATH }}/ru-blocked
-          echo "include:telegram" >> ${{ env.DATA_PATH }}/ru-blocked
-          echo "include:jetbrains" >> ${{ env.DATA_PATH }}/ru-blocked
+            while read -r item; do
+              [ -n "$item" ] || continue
+              echo "include:$item" >> "$out"
+            done < <(yq -r ".lists.\"$list_name\"[]" "${{ env.CONFIG_PATH }}")
 
-          # --- Ads ---
-          echo "include:ext-winspy" > ${{ env.DATA_PATH }}/category-ads-all
-          echo "include:ext-adguard" >> ${{ env.DATA_PATH }}/category-ads-all
+            echo "=> [External - Rules] Список '$list_name' успешно сформирован"
+          done < <(yq -r '.lists | keys[]' "${{ env.CONFIG_PATH }}")
 
-      - name: Create custom-lists from LOCAL rule-lists 
+      - name: Create custom-lists from LOCAL rule-lists
         run: |
+          set -euo pipefail
+
           # Проверка наличия директории domains/ перед итерацией
           if [ -d "domains" ]; then
 
-            declare -A ROUTE_MAP=(
-              ["direct"]="ru-direct"
-              ["white"]="ru-direct"
-              ["proxy"]="ru-blocked"
-              ["block"]="ru-blocked"
-              ["black"]="ru-blocked"
-              ["ads"]="category-ads-all"
-              ["spy"]="category-ads-all"
-            )
+            declare -A ROUTE_MAP=()
+
+            while read -r key; do
+              ROUTE_MAP["$key"]="$(yq -r ".local_routing.\"$key\"" "${{ env.CONFIG_PATH }}")"
+            done < <(yq -r '.local_routing | keys[]' "${{ env.CONFIG_PATH }}")
 
             # Извлечение всех ключей словаря для логирования
             # Замена пробелов на запятые для читабельного вывода
-            ALL_KEYS=$(echo "${!ROUTE_MAP[@]}" | tr ' ' ', ')
+            ALL_KEYS=$(printf "%s\n" "${!ROUTE_MAP[@]}" | paste -sd ", " -)
 
             for file in domains/*.txt; do
               # Пропуск шага в случае отсутствия текстовых файлов
-              [ -e "$file" ] || continue 
+              [ -e "$file" ] || continue
 
               # Извлечение базового имени файла (например, "a-direct")
               fname=$(basename "$file" .txt)
@@ -118,10 +138,10 @@ jobs:
                 if [[ "$fname" == *"$key"* ]]; then
                   # Извлечение целевого списка из словаря
                   dest="${ROUTE_MAP[$key]}"
-                  
+
                   echo "include:loc-$fname" >> "${{ env.DATA_PATH }}/$dest"
                   echo "=> [Local - Rules] Файл '$fname' содержит ключ '$key', добавлен в список <$dest>"
-                  
+
                   matched=true
                   break # Остановка поиска при первом найденном совпадении
                 fi
@@ -134,59 +154,109 @@ jobs:
             done
           fi
 
+      - name: Resolve minimal V2Ray data-tree
+        run: |
+          set -euo pipefail
+
+          # Очистка директории минимального дерева правил
+          rm -rf "${{ env.BUILD_DATA_PATH }}"
+          mkdir -p "${{ env.BUILD_DATA_PATH }}"
+
+          # Инициализация словаря посещенных файлов
+          declare -A VISITED=()
+
+          resolve_file() {
+            local name="$1"
+            local file="${{ env.DATA_PATH }}/$name"
+
+            if [ -n "${VISITED[$name]:-}" ]; then
+              return 0
+            fi
+
+            if [ ! -f "$file" ]; then
+              echo "=> Warning [Resolver] Файл '$name' не найден в исходной директории правил"
+              return 0
+            fi
+
+            VISITED["$name"]=1
+            cp "$file" "${{ env.BUILD_DATA_PATH }}/$name"
+            echo "=> [Resolver] Файл '$name' добавлен в минимальное дерево"
+
+            while read -r inc; do
+              [ -n "$inc" ] || continue
+              resolve_file "$inc"
+            done < <(sed -n 's/^[[:space:]]*include:\([^[:space:]#@][^[:space:]#]*\).*/\1/p' "$file")
+          }
+
+          # Извлечение корневых тегов из publish-конфигурации
+          while read -r root; do
+            [ -n "$root" ] || continue
+            resolve_file "$root"
+          done < <(yq -r '.publish | keys[]' "${{ env.CONFIG_PATH }}")
+
+          # Подготовка списка экспорта для Go-генератора
+          EXPORT_LISTS=$(yq -r '.publish | keys | join(",")' "${{ env.CONFIG_PATH }}")
+          echo "EXPORT_LISTS=$EXPORT_LISTS" >> "$GITHUB_ENV"
+
+          # Логирование итогового набора включенных тегов
+          printf '%s\n' "${!VISITED[@]}" | sort > resolved_rules.txt
+          echo "=> [Resolver] Минимальное дерево правил сформировано"
+          cat resolved_rules.txt
+
       - name: Build V2Ray geosite.dat
         run: |
+          set -euo pipefail
+
           cd "${{ env.DLC_PATH }}"
-          go run ./ --datapath="../${{ env.DATA_PATH }}" \
-                    --outputpath="../${{ env.OUTPUT_PATH }}" \
-                    --exportlists=ru-direct,ru-blocked,category-ads-all
+          go run ./ --datapath="../${{ env.BUILD_DATA_PATH }}" \
+                    --outputdir="../${{ env.OUTPUT_PATH }}" \
+                    --exportlists="${EXPORT_LISTS}"
           cd ..
+
           rm -f "${{ env.OUTPUT_PATH }}/gfwlist.txt"
+          echo "=> [DAT] Сборка geosite.dat завершена"
 
       - name: Prepare Staging Subsystem
         run: |
+          set -euo pipefail
+
           # Выделение буферной директории для переименования исходников
-          mkdir -p staging
-          
+          mkdir -p "${{ env.STAGING_PATH }}"
+
           # Копирование целевых текстовых файлов с применением финальных публичных имен конфигурации
-          if [ -f "${{ env.OUTPUT_PATH }}/ru-direct.txt" ]; then
-            cp "${{ env.OUTPUT_PATH }}/ru-direct.txt" staging/geosite_direct.txt
-            mv "${{ env.OUTPUT_PATH }}/ru-direct.txt" "${{ env.OUTPUT_TEXT_PATH }}/geosite_ru-direct.txt"
-          fi
-          
-          if [ -f "${{ env.OUTPUT_PATH }}/ru-blocked.txt" ]; then
-            cp "${{ env.OUTPUT_PATH }}/ru-blocked.txt" staging/geosite_proxy.txt
-            mv "${{ env.OUTPUT_PATH }}/ru-blocked.txt" "${{ env.OUTPUT_TEXT_PATH }}/geosite_ru-blocked.txt"
-          fi
-          
-          if [ -f "${{ env.OUTPUT_PATH }}/category-ads-all.txt" ]; then
-            cp "${{ env.OUTPUT_PATH }}/category-ads-all.txt" staging/geosite_block.txt
-            mv "${{ env.OUTPUT_PATH }}/category-ads-all.txt" "${{ env.OUTPUT_TEXT_PATH }}/geosite_category-ads-all.txt"
-          fi
+          while IFS='=' read -r src_tag public_name; do
+            src_file="${{ env.OUTPUT_PATH }}/${src_tag}.txt"
+            [ -f "$src_file" ] || continue
+
+            cp "$src_file" "${{ env.STAGING_PATH }}/${public_name}.txt"
+            mv "$src_file" "${{ env.OUTPUT_TEXT_PATH }}/${public_name}.txt"
+
+            echo "=> [Staging] Файл '$src_tag.txt' подготовлен как '${public_name}.txt'"
+          done < <(yq -r '.publish | to_entries[] | "\(.key)=\(.value)"' "${{ env.CONFIG_PATH }}")
 
       # Сборка
       - name: Build Plain Text Lists (.txt)
         uses: ./.github/actions/converters/txt
         with:
-          input_path: staging
+          input_path: ${{ env.STAGING_PATH }}
           output_path: ${{ env.OUTPUT_PATH }}
 
       - name: Build Shadowrocket Rule-sets (_sr.list)
         uses: ./.github/actions/converters/shadowrocket
         with:
-          input_path: staging
+          input_path: ${{ env.STAGING_PATH }}
           output_path: ${{ env.OUTPUT_PATH }}
 
       - name: Build Mihomo Rule-sets (.mrs)
         uses: ./.github/actions/converters/mrs
         with:
-          input_path: staging
+          input_path: ${{ env.STAGING_PATH }}
           output_path: ${{ env.OUTPUT_PATH }}
 
       - name: Build Sing-box Rule-sets (.srs)
         uses: ./.github/actions/converters/srs
         with:
-          input_path: staging
+          input_path: ${{ env.STAGING_PATH }}
           output_path: ${{ env.OUTPUT_PATH }}
 
       # Загрузка результатов
