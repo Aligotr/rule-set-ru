@@ -138,7 +138,7 @@ jobs:
         run: |
           cd "${{ env.DLC_PATH }}"
           go run ./ --datapath="../${{ env.DATA_PATH }}" \
-                    --outputdir="../${{ env.OUTPUT_PATH }}" \
+                    --outputpath="../${{ env.OUTPUT_PATH }}" \
                     --exportlists=ru-direct,ru-blocked,category-ads-all
           cd ..
 
