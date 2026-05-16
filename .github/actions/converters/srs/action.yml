@@ -17,7 +17,7 @@ runs:
       run: |
         # Проверка наличия компилятора в системе
         if ! command -v sing-box &> /dev/null; then
-          echo "=> [Srs] Скачивание компилятора Sing-box..."
+          echo "=> [SRS] Скачивание компилятора Sing-box..."
           BIN_DIR="${RUNNER_TEMP}/rule_compilers"
           mkdir -p "$BIN_DIR"
           
@@ -26,9 +26,9 @@ runs:
           curl -sL "$SB_URL" | tar -xz --strip-components=1 -C "$BIN_DIR" --wildcards "*/sing-box"
           
           echo "$BIN_DIR" >> $GITHUB_PATH
-          echo "=> [Srs] Установка Sing-box завершена"
+          echo "=> [SRS] Установка Sing-box завершена"
         else
-          echo "=> [Srs] Использование существующего компилятора Sing-box"
+          echo "=> [SRS] Использование существующего компилятора Sing-box"
         fi
 
     - name: Compile SRS
@@ -64,7 +64,7 @@ runs:
           sing-box rule-set compile tmp_singbox.json --output "${{ inputs.output_path }}/${name}.srs"
           rm -f tmp_singbox.json
           
-          echo "=> [Srs] Завершено форматирование (${name}.srs)"
+          echo "=> [SRS] Завершено форматирование (${name}.srs)"
         }
 
         mkdir -p "${{ inputs.output_path }}"
