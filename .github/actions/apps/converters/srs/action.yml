@@ -1,0 +1,66 @@
+name: Generate Sing-box App Ruleset
+description: Компиляция app-правил маршрутизации в бинарный формат Sing-box (.srs)
+
+inputs:
+  input_path:
+    description: Директория или путь к исходному JSON-файлу
+    required: true
+  output_path:
+    description: Директория для сохранения результатов обработки
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Bootstrap Sing-box Compiler
+      shell: bash
+      run: |
+        # Проверка наличия компилятора в системе
+        if ! command -v sing-box &> /dev/null; then
+          echo "=> [Apps-SRS] Скачивание компилятора Sing-box..."
+          BIN_DIR="${RUNNER_TEMP}/rule_compilers"
+          mkdir -p "$BIN_DIR"
+
+          SB_URL=$(curl -s https://api.github.com/repos/SagerNet/sing-box/releases/latest | jq -r '.assets[] | select(.name | contains("linux-amd64.tar.gz")) | .browser_download_url')
+          curl -sL "$SB_URL" | tar -xz --strip-components=1 -C "$BIN_DIR" --wildcards "*/sing-box"
+
+          echo "$BIN_DIR" >> $GITHUB_PATH
+          export PATH="$BIN_DIR:$PATH"
+          echo "=> [Apps-SRS] Установка Sing-box завершена"
+        else
+          echo "=> [Apps-SRS] Использование существующего компилятора Sing-box"
+        fi
+
+    - name: Compile Apps SRS
+      shell: bash
+      run: |
+        process_file() {
+          local file="$1"
+          local name="$(basename "$file" .json)"
+
+          [ -s "$file" ] || return 0
+
+          tmp_json="${RUNNER_TEMP}/${name}.json"
+
+          # Формирование промежуточной JSON-структуры
+          jq '
+            {
+              version: (.version // 1),
+              rules: [ .rules[]? ]
+            }
+          ' "$file" > "$tmp_json"
+
+          # Компиляция SRS-файла
+          sing-box rule-set compile "$tmp_json" --output "${{ inputs.output_path }}/${name}.srs"
+          rm -f "$tmp_json"
+
+          echo "=> [Apps-SRS] Завершено форматирование (${name}.srs)"
+        }
+
+        mkdir -p "${{ inputs.output_path }}"
+
+        if [ -d "${{ inputs.input_path }}" ]; then
+          for f in "${{ inputs.input_path }}"/*.json; do [ -f "$f" ] && process_file "$f"; done
+        elif [ -f "${{ inputs.input_path }}" ]; then
+          process_file "${{ inputs.input_path }}"
+        fi
