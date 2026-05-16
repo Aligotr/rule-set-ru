@@ -1,0 +1,62 @@
+name: Generate GeoIP Shadowrocket Ruleset
+description: Преобразование IP-списков в формат Shadowrocket (_sr.list)
+
+inputs:
+  input_path:
+    description: Директория или путь к исходному текстовому файлу
+    required: true
+  output_path:
+    description: Директория для сохранения результатов обработки
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Compile Shadowrocket
+      shell: bash
+      run: |
+        process_file() {
+          local file="$1"
+          local name="$(basename "$file" .txt)"
+
+          [ -s "$file" ] || return 0
+
+          awk '
+            {
+              gsub(/\r/, "", $0)
+              sub(/^[[:space:]]+/, "", $0)
+              sub(/[[:space:]]+$/, "", $0)
+            }
+            /^$/ { next }
+
+            /^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$/ {
+              print "IP-CIDR," $0 "/32"
+              next
+            }
+
+            /^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+\/[0-9]+$/ {
+              print "IP-CIDR," $0
+              next
+            }
+
+            /^[0-9a-fA-F:]+$/ {
+              print "IP-CIDR6," $0 "/128"
+              next
+            }
+
+            /^[0-9a-fA-F:]+\/[0-9]+$/ {
+              print "IP-CIDR6," $0
+              next
+            }
+          ' "$file" > "${{ inputs.output_path }}/${name}_sr.list"
+
+          echo "=> [GeoIP-Shadowrocket] Завершено форматирование (${name}_sr.list)"
+        }
+
+        mkdir -p "${{ inputs.output_path }}"
+
+        if [ -d "${{ inputs.input_path }}" ]; then
+          for f in "${{ inputs.input_path }}"/*.txt; do [ -f "$f" ] && process_file "$f"; done
+        elif [ -f "${{ inputs.input_path }}" ]; then
+          process_file "${{ inputs.input_path }}"
+        fi
