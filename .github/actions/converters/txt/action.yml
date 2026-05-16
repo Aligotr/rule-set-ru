@@ -24,7 +24,7 @@ runs:
 
           # Удаление технических префиксов (оставление исключительно доменов и правил)
           sed -E '
-            s/ @[^[:space:]]+$//;
+            s/( @|:@)[A-Za-z0-9_-]+$//;
             s/^(domain|full|keyword|regexp)://
           ' "$file" > "${{ inputs.output_path }}/${name}.txt"
 
