@@ -45,6 +45,7 @@ runs:
             /^full:/    { print "  - \x27" substr($0,6) "\x27"; next }
             /^keyword:/ { print "  - DOMAIN-KEYWORD," substr($0,9); next }
             /^regexp:/  { next } 
+            /^domain:/  { print "  - \x27+." substr($0,8) "\x27"; next }
             { print "  - \x27+." $0 "\x27" }
           ' "$file" >> tmp_payload.yaml
           
