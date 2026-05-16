@@ -7,6 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       CONFIG_PATH: .github/geosite.yml
+      OUTPUT_PREFIX: geosite
       DATA_PATH: community/data
       RAW_BUILD_DATA_PATH: build-data-raw
       BUILD_DATA_PATH: build-data
@@ -112,7 +113,7 @@ jobs:
               [ -n "$item" ] || continue
               include_name=$(make_internal_name "$item")
               echo "include:$include_name" >> "$out"
-            done < <(yq -r ".community_lists.\"$logical_name\"[]" "${{ env.CONFIG_PATH }}")
+            done < <(yq -r ".lists_community.\"$logical_name\"[]" "${{ env.CONFIG_PATH }}")
 
             while read -r item; do
               [ -n "$item" ] || continue
@@ -124,7 +125,7 @@ jobs:
               else
                 echo "=> Warning [Local - Rules] Локальный файл '${item}.txt' не найден"
               fi
-            done < <(yq -r ".local_lists.\"$logical_name\"[]" "${{ env.CONFIG_PATH }}")
+            done < <(yq -r ".lists_local.\"$logical_name\"[]" "${{ env.CONFIG_PATH }}")
 
             echo "=> [Config - Rules] Список '$internal_name' успешно сформирован"
           done < <(yq -r '.publish | keys[]' "${{ env.CONFIG_PATH }}")
@@ -190,13 +191,13 @@ jobs:
             echo "=> [Resolver] Root-список '$internal_root' собран в raw-формате"
           done < <(yq -r '.publish | keys[]' "${{ env.CONFIG_PATH }}")
 
-          # Извлечение дополнительных community-тегов expose-конфигурации
+          # Извлечение дополнительных community-тегов
           while read -r root; do
             [ -n "$root" ] || continue
             internal_root=$(make_internal_name "$root")
             flatten_file "$internal_root" "" > "${{ env.RAW_BUILD_DATA_PATH }}/$internal_root"
             echo "=> [Resolver] Community-список '$internal_root' собран в raw-формате"
-          done < <(yq -r '.community_expose[]?' "${{ env.CONFIG_PATH }}")
+          done < <(yq -r '.lists_community_expose[]?' "${{ env.CONFIG_PATH }}")
 
           # Подготовка списка экспорта для текстовых файлов
           EXPORT_LISTS=$(while read -r root; do make_internal_name "$root"; done < <(yq -r '.publish | keys[]' "${{ env.CONFIG_PATH }}") | paste -sd "," -)
@@ -226,7 +227,7 @@ jobs:
           yq -r '.publish | keys[]' "${{ env.CONFIG_PATH }}"
 
           echo "=> [Diagnostics] Список дополнительных community-тегов"
-          yq -r '.community_expose[]?' "${{ env.CONFIG_PATH }}" || true
+          yq -r '.lists_community_expose[]?' "${{ env.CONFIG_PATH }}" || true
 
           echo "=> [Diagnostics] Значение EXPORT_LISTS: ${EXPORT_LISTS}"
 
@@ -263,19 +264,25 @@ jobs:
             esac
           }
 
+          make_public_name() {
+            local name="$1"
+            printf '%s_%s\n' "${{ env.OUTPUT_PREFIX }}" "$name"
+          }
+
           # Выделение буферной директории для переименования исходников
           mkdir -p "${{ env.STAGING_PATH }}"
 
           # Копирование целевых текстовых файлов с применением финальных публичных имен конфигурации
           while IFS='=' read -r src_tag public_name; do
             internal_name=$(make_internal_name "$src_tag")
+            output_name=$(make_public_name "$public_name")
             src_file="${{ env.OUTPUT_PATH }}/${internal_name}.txt"
             [ -f "$src_file" ] || continue
 
-            cp "$src_file" "${{ env.STAGING_PATH }}/${public_name}.txt"
-            mv "$src_file" "${{ env.OUTPUT_TEXT_PATH }}/${public_name}.txt"
+            cp "$src_file" "${{ env.STAGING_PATH }}/${output_name}.txt"
+            mv "$src_file" "${{ env.OUTPUT_TEXT_PATH }}/${output_name}.txt"
 
-            echo "=> [Staging] Файл '${internal_name}.txt' подготовлен как '${public_name}.txt'"
+            echo "=> [Staging] Файл '${internal_name}.txt' подготовлен как '${output_name}.txt'"
           done < <(yq -r '.publish | to_entries[] | "\(.key)=\(.value)"' "${{ env.CONFIG_PATH }}")
 
       # Сборка
