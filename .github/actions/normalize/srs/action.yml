@@ -1,0 +1,61 @@
+name: Generate Sing-box Ruleset
+description: Парсинг и компиляция списков в бинарный формат Sing-box (.srs)
+
+inputs:
+  input_path:
+    description: Директория или путь к исходному файлу
+    required: true
+  output_path:
+    description: Директория для сохранения результатов обработки
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: |
+        process_file() {
+          local file="$1"
+          local name="$(basename "$file" .txt)"
+          
+          # Исключение пустых файлов из процесса обработки
+          [ -s "$file" ] || return 0
+
+          # Сортировка и распределение правил по массивам JSON-объекта
+          SFX=$(grep -vE '^(full|keyword|regexp):' "$file" | jq -RM '. | select(length>0)' | jq -c -s . || echo "[]")
+          DOM=$(grep '^full:' "$file" | sed 's/^full://' | jq -Rs 'split("\n") | map(select(length>0))' || echo "[]")
+          KWD=$(grep '^keyword:' "$file" | sed 's/^keyword://' | jq -Rs 'split("\n") | map(select(length>0))' || echo "[]")
+          RGX=$(grep '^regexp:' "$file" | sed 's/^regexp://' | jq -Rs 'split("\n") | map(select(length>0))' || echo "[]")
+
+          # Формирование промежуточной структуры JSON
+          jq -n --argjson sfx "$SFX" --argjson dom "$DOM" --argjson kwd "$KWD" --argjson rgx "$RGX" '
+          {
+            "version": 1,
+            "rules": [
+              {
+                "domain_suffix":  (if ($sfx | length) > 0 then $sfx else null end),
+                "domain":         (if ($dom | length) > 0 then $dom else null end),
+                "domain_keyword": (if ($kwd | length) > 0 then $kwd else null end),
+                "domain_regex":   (if ($rgx | length) > 0 then $rgx else null end)
+              } | with_entries(select(.value != null))
+            ]
+          }' > tmp_singbox.json
+          
+          # Выполнение компиляции целевого бинарного файла
+          sing-box rule-set compile tmp_singbox.json --output "${{ inputs.output_path }}/${name}.srs"
+          
+          # Очистка рабочей среды от временных файлов
+          rm -f tmp_singbox.json
+
+          echo "=> [Normalize - Sing-box] Завершено форматирование (${name}.srs)"
+        }
+
+        # Создание выходной директории
+        mkdir -p "${{ inputs.output_path }}"
+        
+        # Маршрутизация обработки (директория или одиночный файл)
+        if [ -d "${{ inputs.input_path }}" ]; then
+          for f in "${{ inputs.input_path }}"/*.txt; do [ -f "$f" ] && process_file "$f"; done
+        elif [ -f "${{ inputs.input_path }}" ]; then
+          process_file "${{ inputs.input_path }}"
+        fi
