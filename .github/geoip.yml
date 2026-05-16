@@ -1,5 +1,13 @@
 country_code: ru
 
+asn_path: asn
+ips_path: ips
+
+publish:
+  whitelist: whitelist
+  direct: direct
+  blocked: proxy
+
 asn_lists:
   whitelist:
     - yandex
@@ -22,16 +30,8 @@ ip_lists:
     - blocked
     - dns-proxy
 
-publish:
-  whitelist: whitelist
-  direct: direct
-  blocked: proxy
-
 sources:
   blocked:
     - https://antifilter.download/list/ip.lst
     - https://www.cloudflare.com/ips-v4
     - https://raw.githubusercontent.com/GhostRooter0953/discord-voice-ips/master/voice_domains/discord-voice-ip-list
-
-asn_path: asn
-ips_path: ips
