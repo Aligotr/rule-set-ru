@@ -42,6 +42,7 @@ lists_local:
   category-ads: []
 
 lists_community_expose:
+  - private
   - youtube
   - telegram
 
