@@ -1,0 +1,37 @@
+name: Generate Plain Text List
+description: Конвертация распакованного списка V2Ray в чистый текстовый формат (.txt)
+
+inputs:
+  input_path:
+    description: Директория или путь к исходному файлу
+    required: true
+  output_path:
+    description: Директория для сохранения результатов обработки
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: |
+        process_file() {
+          local file="$1"
+          local filename=$(basename "$file")
+          local name="${filename%.*}"
+          
+          # Исключение пустых файлов из процесса обработки
+          [ -s "$file" ] || return 0
+
+          # Удаление технических префиксов (сохранение исключительно базовых доменов и правил)
+          cat "$file" | sed -E 's/^(full|keyword|regexp)://' > "${{ inputs.output_path }}/${name}.txt"
+        }
+
+        # Создание выходной директории
+        mkdir -p "${{ inputs.output_path }}"
+        
+        # Маршрутизация обработки (директория или одиночный файл)
+        if [ -d "${{ inputs.input_path }}" ]; then
+          for f in "${{ inputs.input_path }}"/*.txt; do [ -f "$f" ] && process_file "$f"; done
+        elif [ -f "${{ inputs.input_path }}" ]; then
+          process_file "${{ inputs.input_path }}"
+        fi
