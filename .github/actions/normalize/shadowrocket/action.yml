@@ -1,0 +1,43 @@
+name: Generate Shadowrocket Rule-set
+description: Разбор и преобразование списков в формат синтаксиса Shadowrocket/Surge (_sr.list)
+
+inputs:
+  input_path:
+    description: Директория или путь к исходному файлу
+    required: true
+  output_path:
+    description: Директория для сохранения результатов обработки
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: |
+        process_file() {
+          local file="$1"
+          local name="$(basename "$file" .txt)"
+          
+          # Исключение пустых файлов из процесса обработки
+          [ -s "$file" ] || return 0
+
+          # Трансляция синтаксиса V2Ray в операторы Surge/Shadowrocket
+          awk '
+            /^full:/ { print "DOMAIN," substr($0,6); next }
+            /^keyword:/ { print "DOMAIN-KEYWORD," substr($0,9); next }
+            /^regexp:/ { print "URL-REGEX," substr($0,8); next }
+            { print "DOMAIN-SUFFIX," $0 }
+          ' "$file" > "${{ inputs.output_path }}/${name}_sr.list"
+
+          echo "=> [Normalize - Shadowrocket] Завершено форматирование (${name}_sr.list)"
+        }
+
+        # Создание выходной директории
+        mkdir -p "${{ inputs.output_path }}"
+        
+        # Маршрутизация обработки (директория или одиночный файл)
+        if [ -d "${{ inputs.input_path }}" ]; then
+          for f in "${{ inputs.input_path }}"/*.txt; do [ -f "$f" ] && process_file "$f"; done
+        elif [ -f "${{ inputs.input_path }}" ]; then
+          process_file "${{ inputs.input_path }}"
+        fi
