@@ -175,29 +175,30 @@ jobs:
           DIRECT_IP_JSON=$(resolve_ip_list "direct" "" | awk '!seen[$0]++' | jq -R . | jq -s .)
           BLOCKED_IP_JSON=$(resolve_ip_list "blocked" "" | awk '!seen[$0]++' | jq -R . | jq -s .)
 
-          # Формирование конфигурации сборки
-          jq -n \
+          # Формирование input-блока конфигурации
+          INPUT_JSON=$(jq -n \
             --arg country "$COUNTRY_CODE" \
-            --argjson root_internal_lists "$ROOT_INTERNAL_LISTS_JSON" \
             --argjson blocked_sources "$BLOCKED_SOURCES_JSON" \
             --argjson asn_wanted_list "$ASN_WANTED_LIST_JSON" \
             --argjson whitelist_ip "$WHITELIST_IP_JSON" \
             --argjson direct_ip "$DIRECT_IP_JSON" \
             --argjson blocked_ip "$BLOCKED_IP_JSON" \
             '
-            {
-              input: (
-                [
-                  $blocked_sources[] | {
-                    type: "text",
-                    action: "add",
-                    args: {
-                      name: ($country + "-blocked"),
-                      uri: .
-                    }
+            (
+              [
+                $blocked_sources[] | {
+                  type: "text",
+                  action: "add",
+                  args: {
+                    name: ($country + "-blocked"),
+                    uri: .
                   }
-                ]
-                + [
+                }
+              ]
+            )
+            + (
+              if ($asn_wanted_list | length) > 0 then
+                [
                   {
                     type: "maxmindGeoLite2ASNCSV",
                     action: "add",
@@ -205,7 +206,15 @@ jobs:
                       ipv4: "./geolite2/GeoLite2-ASN-Blocks-IPv4.csv",
                       wantedList: $asn_wanted_list
                     }
-                  },
+                  }
+                ]
+              else
+                []
+              end
+            )
+            + (
+              if ($whitelist_ip | length) > 0 then
+                [
                   {
                     type: "text",
                     action: "add",
@@ -213,7 +222,15 @@ jobs:
                       name: ($country + "-whitelist"),
                       ipOrCIDR: $whitelist_ip
                     }
-                  },
+                  }
+                ]
+              else
+                []
+              end
+            )
+            + (
+              if ($direct_ip | length) > 0 then
+                [
                   {
                     type: "text",
                     action: "add",
@@ -221,7 +238,15 @@ jobs:
                       name: ($country + "-direct"),
                       ipOrCIDR: $direct_ip
                     }
-                  },
+                  }
+                ]
+              else
+                []
+              end
+            )
+            + (
+              if ($blocked_ip | length) > 0 then
+                [
                   {
                     type: "text",
                     action: "add",
@@ -229,24 +254,38 @@ jobs:
                       name: ($country + "-blocked"),
                       ipOrCIDR: $blocked_ip
                     }
-                  },
-                  {
-                    type: "private",
-                    action: "add"
-                  },
-                  {
-                    type: "text",
-                    action: "remove",
-                    args: {
-                      name: "private",
-                      ipOrCIDR: [
-                        "0.0.0.0/8",
-                        "::/128"
-                      ]
-                    }
                   }
                 ]
-              ),
+              else
+                []
+              end
+            )
+            + [
+              {
+                type: "private",
+                action: "add"
+              },
+              {
+                type: "text",
+                action: "remove",
+                args: {
+                  name: "private",
+                  ipOrCIDR: [
+                    "0.0.0.0/8",
+                    "::/128"
+                  ]
+                }
+              }
+            ]
+            ')
+
+          # Формирование конфигурации сборки
+          jq -n \
+            --argjson input "$INPUT_JSON" \
+            --argjson root_internal_lists "$ROOT_INTERNAL_LISTS_JSON" \
+            '
+            {
+              input: $input,
               output: [
                 {
                   type: "v2rayGeoIPDat",
