@@ -1,5 +1,5 @@
 name: Normalize Files Action
-description: Удаляет мусор из строки
+description: Удаление мусора из строк и опциональная дедупликация
 
 inputs:
   input_path:
@@ -16,6 +16,10 @@ inputs:
     description: Расширение конечного файла
     required: false
     default: ""
+  dedupe:
+    description: Удаление дублирующихся строк с сохранением порядка
+    required: false
+    default: "false"
 
 runs:
   using: composite
@@ -28,6 +32,7 @@ runs:
           local raw_prefix="${{ inputs.prefix }}"
           local prefix="${raw_prefix:+"${raw_prefix}_"}"
           local raw_ext="${{ inputs.ext }}"
+          local dedupe="${{ inputs.dedupe }}"
 
           filename=$(basename "$file")
           if [ -n "$raw_ext" ]; then
@@ -35,24 +40,41 @@ runs:
             filename="${name}.${raw_ext}"
           fi
 
-          [ -e "$file" ] || return 0  
-          sed "
-            s/\r//g;                   # Удалить Windows CR
-            s/#.*//;                   # Удалить всё после символа #
-            s/^[[:space:]{}\"']*//;    # Удалить пробелы и кавычки в начале
-            s/[[:space:]{}\"']*$//;    # Удалить пробелы и кавычки в конце
-            /^[[:space:]]*include:/d;  # Удалить строки начинающиеся с "include:"
-            /^$/d                      # Удалить пустые строки
-          " "$file" > "${out_path}/${prefix}${filename}"
+          [ -e "$file" ] || return 0
+
+          mkdir -p "$out_path"
+
+          if [ "$dedupe" = "true" ]; then
+            awk '
+              {
+                gsub(/\r/, "", $0)
+                sub(/[[:space:]]*#.*$/, "", $0)
+                sub(/^[[:space:]{}"'"'"']+/, "", $0)
+                sub(/[[:space:]{}"'"'"']+$/, "", $0)
+              }
+              /^[[:space:]]*include:/ { next }
+              /^$/ { next }
+              !seen[$0]++ { print }
+            ' "$file" > "${out_path}/${prefix}${filename}"
+          else
+            sed "
+              s/\r//g;                  # Удаление Windows CR
+              s/#.*//;                  # Удаление всего после символа #
+              s/^[[:space:]{}\"']*//;   # Удаление пробелов и кавычек в начале
+              s/[[:space:]{}\"']*$//;   # Удаление пробелов и кавычек в конце
+              /^[[:space:]]*include:/d; # Удаление строк include:
+              /^$/d                     # Удаление пустых строк
+            " "$file" > "${out_path}/${prefix}${filename}"
+          fi
         }
 
         if [ -d "${{ inputs.input_path }}" ]; then
-          # Если это директория — перебираем файлы
+          # Обработка директории
           for f in "${{ inputs.input_path }}"/*; do
             [ -f "$f" ] && process_file "$f"
           done
         elif [ -f "${{ inputs.input_path }}" ]; then
-          # Если это одиночный файл — обрабатываем его
+          # Обработка одиночного файла
           process_file "${{ inputs.input_path }}"
         else
           echo "Warning: Path ${{ inputs.input_path }} not found."
