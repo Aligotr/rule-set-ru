@@ -17,7 +17,8 @@ lists_asn:
     - whitelist
     - gosuslugi
 
-  blocked: []
+  blocked:
+    - telegram
 
 lists_ip:
   whitelist:
