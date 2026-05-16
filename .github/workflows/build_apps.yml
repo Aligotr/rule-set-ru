@@ -107,13 +107,13 @@ jobs:
 
       # Сборка
       - name: Build Mihomo App Rule-sets (.yaml, .mrs)
-        uses: ./.github/actions/converters/apps-mrs
+        uses: ./.github/actions/apps/converters/mrs
         with:
           input_path: ${{ env.STAGING_PATH }}
           output_path: ${{ env.OUTPUT_PATH }}
 
       - name: Build Sing-box App Rule-sets (.srs)
-        uses: ./.github/actions/converters/apps-srs
+        uses: ./.github/actions/apps/converters/srs
         with:
           input_path: ${{ env.STAGING_PATH }}
           output_path: ${{ env.OUTPUT_PATH }}
