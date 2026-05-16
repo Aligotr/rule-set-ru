@@ -6,16 +6,13 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      BIN_PATH: bin # Относительно $(pwd)
       DLC_PATH: dlc
       DATA_PATH: community/data
-      V2RAY_PATH: community/build
       OUTPUT_PATH: output
       OUTPUT_TEXT_PATH: output/text
 
     steps:
-      # Install dependencies
-      - name: Checkout codebase
+      - name: Checkout User Codebase
         uses: actions/checkout@v4
 
       - name: Checkout Loyalsoldier/domain-list-custom
@@ -30,132 +27,185 @@ jobs:
           repository: v2fly/domain-list-community
           path: community
 
-      - name: Setup Go
+      # Инициализация базовой среды
+      - name: Setup Go Environment
         uses: actions/setup-go@v5
         with:
           go-version-file: ${{ env.DLC_PATH }}/go.mod
           cache-dependency-path: ${{ env.DLC_PATH }}/go.sum
 
-      - name: Install tools
+      - name: Initialize Workspace
         run: |
-          echo "BIN_PATH=$(pwd)/${{ env.BIN_PATH }}" >> $GITHUB_ENV
-          mkdir -p ${{ env.BIN_PATH }}
+          # Выделение базовых директорий для рабочего процесса
+          mkdir -p ${{ env.OUTPUT_PATH }} ${{ env.OUTPUT_TEXT_PATH }}
 
-          # Sing-box
-          SB_URL=$(curl -s https://api.github.com/repos/SagerNet/sing-box/releases/latest | jq -r '.assets[] | select(.name | contains("linux-amd64.tar.gz")) | .browser_download_url')
-          curl -L "$SB_URL" | tar -xz --strip-components=1 -C ${{ env.BIN_PATH }}
-
-          # Mihomo
-          MIHOMO_URL=$(curl -s https://api.github.com/repos/MetaCubeX/mihomo/releases/latest | jq -r '.assets[] | select(.name | contains("linux-amd64")) | select(.name | endswith(".gz")) | .browser_download_url' | head -n 1)
-          curl -L "$MIHOMO_URL" | gunzip > ${{ env.BIN_PATH }}/mihomo
-          chmod +x ${{ env.BIN_PATH }}/mihomo
-
-      - name: Prepare PATHs
+      # Подготовка правил
+      - name: Ingress External Data into V2Ray
         run: |
-          echo "${{ env.BIN_PATH }}" >> $GITHUB_PATH
-          mkdir -p ${{ env.V2RAY_PATH }} ${{ env.OUTPUT_TEXT_PATH }}
-
-      # Build
-      - name: Build V2Ray Dat
-        run: |
-          # Подготовка списков
-          export LC_ALL=C
+          # Spy
+          curl -sSL "https://raw.githubusercontent.com/crazy-max/WindowsSpyBlocker/master/data/hosts/spy.txt" | \
+          grep "0.0.0.0" | awk '{print $2}' > ${{ env.DATA_PATH }}/ext-winspy
           
-          # Direct
-          cp "${{ env.DATA_PATH }}"/{private,category-gov-ru,yandex,vk,x5,bitwarden} "${{ env.V2RAY_PATH }}/"
-
-          sort --ignore-case -u \
-            "domains/a-direct.txt" \
-            "${{ env.V2RAY_PATH }}/category-gov-ru" \
-            "${{ env.V2RAY_PATH }}/yandex" \
-            "${{ env.V2RAY_PATH }}/vk" \
-            "${{ env.V2RAY_PATH }}/x5" \
-            "${{ env.V2RAY_PATH }}/bitwarden" \
-          > "${{ env.V2RAY_PATH }}/ru-direct"
-
-          # Block
-          curl -sSL "https://raw.githubusercontent.com/crazy-max/WindowsSpyBlocker/master/data/hosts/spy.txt" | grep "0.0.0.0" | awk '{print $2}' > ${{ env.V2RAY_PATH }}/win-spy
-          {
-            # AdGuard
-            curl -sSL "https://adguardteam.github.io/AdGuardSDNSFilter/Filters/filter.txt" | \
-            perl -ne '/^\|\|([-_0-9a-zA-Z]+(\.[-_0-9a-zA-Z]+){1,64})\^$/ && print "$1\n"' | \
-            perl -ne 'print if not /^[0-9]{1,3}(\.[0-9]{1,3}){3}$/'
-            # Peter Lowe
-            # curl -sSL "https://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&showintro=1&mimetype=plaintext" | \
-            # perl -ne '/^127\.0\.0\.1\s([-_0-9a-zA-Z]+(\.[-_0-9a-zA-Z]+){1,64})$/ && print "$1\n"'
-          } | grep -vi "t.co" | sort -f -u > "${{ env.V2RAY_PATH }}/category-ads-all"
+          # AdGuard
+          curl -sSL "https://adguardteam.github.io/AdGuardSDNSFilter/Filters/filter.txt" | \
+          perl -ne '/^\|\|([-_0-9a-zA-Z]+(\.[-_0-9a-zA-Z]+){1,64})\^$/ && print "$1\n"' | \
+          perl -ne 'print if not /^[0-9]{1,3}(\.[0-9]{1,3}){3}$/' | grep -vi "t.co" > ${{ env.DATA_PATH }}/ext-adguard
 
           # Proxy
-          curl -sSL "https://community.antifilter.download/list/domains.lst" > ${{ env.DATA_PATH }}/antifilter-community
-          curl -sSL "https://raw.githubusercontent.com/1andrevich/Re-filter-lists/main/domains_all.lst" > ${{ env.DATA_PATH }}/re-filter
-          cp "${{ env.DATA_PATH }}"/{youtube,discord,instagram,telegram,jetbrains} "${{ env.V2RAY_PATH }}/"
+          curl -sSL "https://community.antifilter.download/list/domains.lst" > ${{ env.DATA_PATH }}/ext-antifilter
+          curl -sSL "https://raw.githubusercontent.com/1andrevich/Re-filter-lists/main/domains_all.lst" > ${{ env.DATA_PATH }}/ext-refilter
 
-          sort --ignore-case -u \
-            "domains/a-proxy.txt" \
-            "${{ env.DATA_PATH }}/antifilter-community" \
-            "${{ env.DATA_PATH }}/re-filter" \
-          > "${{ env.V2RAY_PATH }}/ru-blocked"
-
-      - name: Normalize and move data
-        uses: ./.github/actions/normalize
-        with:
-          input_path: "${{ env.V2RAY_PATH }}"
-          output_path: "${{ env.OUTPUT_TEXT_PATH }}"
-
-      - name: Build All Formats
+      - name: Create custom-lists from EXTERNAL rule-lists 
         run: |
-          # V2Ray
-          cd "${{ env.DLC_PATH }}" && go run ./ --exportlists= --togfwlist=ru-blocked --datapath="../${{ env.OUTPUT_TEXT_PATH }}" && cd ..
-          mv "${{ env.DLC_PATH }}/publish/geosite.dat" "${{ env.OUTPUT_PATH }}/"
+          # External
+          # --- Whitelist ---
+          echo "include:vk" > ${{ env.DATA_PATH }}/ru-whitelist
+          echo "include:yandex" >> ${{ env.DATA_PATH }}/ru-whitelist
 
-          # SRS, MRS, LST, TXT
-          build_all() {
-              local name=$1
-              shift
-              local files=("$@")
-              local tmp_list="temp_unique_list.txt"
-              
-              # Сборка списка уникальных доменов для группы
-              cat "${files[@]}" 2>/dev/null | sort -ui | grep -v '^$' > "$tmp_list"
-              
-              # Если список пуст, выходим
-              [ -s "$tmp_list" ] || return 0
+          # --- Direct ---
+          echo "include:ru-whitelist" > ${{ env.DATA_PATH }}/ru-direct
+          echo "include:category-gov-ru" >> ${{ env.DATA_PATH }}/ru-direct
+          echo "include:x5" >> ${{ env.DATA_PATH }}/ru-direct
+          echo "include:bitwarden" >> ${{ env.DATA_PATH }}/ru-direct
 
-              # --- Формат .lst (простой текст) ---
-              cp "$tmp_list" "${{ env.OUTPUT_PATH }}/${name}.lst"
+          # --- Proxy ---
+          echo "include:ext-antifilter" > ${{ env.DATA_PATH }}/ru-blocked
+          echo "include:ext-refilter" >> ${{ env.DATA_PATH }}/ru-blocked
+          echo "include:youtube" >> ${{ env.DATA_PATH }}/ru-blocked
+          echo "include:discord" >> ${{ env.DATA_PATH }}/ru-blocked
+          echo "include:instagram" >> ${{ env.DATA_PATH }}/ru-blocked
+          echo "include:telegram" >> ${{ env.DATA_PATH }}/ru-blocked
+          echo "include:jetbrains" >> ${{ env.DATA_PATH }}/ru-blocked
 
-              # --- Формат .mrs (Mihomo/Clash Meta) ---
-              echo "payload:" > temp.yaml
-              sed "s/.*/- '+.&'/" "$tmp_list" >> temp.yaml
-              mihomo convert-ruleset domain yaml temp.yaml "${{ env.OUTPUT_PATH }}/${name}.mrs"
+          # --- Ads ---
+          echo "include:ext-winspy" > ${{ env.DATA_PATH }}/category-ads-all
+          echo "include:ext-adguard" >> ${{ env.DATA_PATH }}/category-ads-all
 
-              # --- Формат .srs (Sing-box) ---
-              jq -Rs '
-              {
-                "version": 1,
-                "rules": [{ "domain_suffix": (split("\n") | map(select(length > 0))) }]
-              }' "$tmp_list" > temp.json
-              sing-box rule-set compile temp.json --output "${{ env.OUTPUT_PATH }}/${name}.srs"
+      - name: Create custom-lists from LOCAL rule-lists 
+        run: |
+          # Проверка наличия директории domains/ перед итерацией
+          if [ -d "domains" ]; then
 
-              rm -f temp.yaml temp.json "$tmp_list"
-          }
-         
-          build_all "geosite_direct" \
-              "${{ env.OUTPUT_TEXT_PATH }}/ru-direct"
+            declare -A ROUTE_MAP=(
+              ["direct"]="ru-direct"
+              ["white"]="ru-direct"
+              ["proxy"]="ru-blocked"
+              ["block"]="ru-blocked"
+              ["black"]="ru-blocked"
+              ["ads"]="category-ads-all"
+              ["spy"]="category-ads-all"
+            )
 
-          build_all "geosite_block" \
-              "${{ env.OUTPUT_TEXT_PATH }}/win-spy" \
-              "${{ env.OUTPUT_TEXT_PATH }}/category-ads-all"
+            # Извлечение всех ключей словаря для логирования
+            # Замена пробелов на запятые для читабельного вывода
+            ALL_KEYS=$(echo "${!ROUTE_MAP[@]}" | tr ' ' ', ')
 
-          build_all "geosite_proxy" \
-              "${{ env.OUTPUT_TEXT_PATH }}/ru-blocked"
+            for file in domains/*.txt; do
+              # Пропуск шага в случае отсутствия текстовых файлов
+              [ -e "$file" ] || continue 
 
-      - name: Rename text files
-        run: for file in ${{ env.OUTPUT_TEXT_PATH }}/*; do mv "$file" "${{ env.OUTPUT_TEXT_PATH }}/geosite_$(basename "$file").txt"; done
+              # Извлечение базового имени файла (например, "a-direct")
+              fname=$(basename "$file" .txt)
 
-      # Uploading results
+              # Копирование файла в рабочую среду генератора V2Ray
+              cp "$file" "${{ env.DATA_PATH }}/loc-$fname"
+
+              matched=false
+
+              # Эвристическое распределение (Назначение маршрута на основе ключевых слов в имени)
+              # Итерация по всем ключам словаря для поиска совпадений в имени файла
+              for key in "${!ROUTE_MAP[@]}"; do
+                if [[ "$fname" == *"$key"* ]]; then
+                  # Извлечение целевого списка из словаря
+                  dest="${ROUTE_MAP[$key]}"
+                  
+                  echo "include:loc-$fname" >> "${{ env.DATA_PATH }}/$dest"
+                  echo "=> [Local - Rules] Файл '$fname' содержит ключ '$key', добавлен в список <$dest>"
+                  
+                  matched=true
+                  break # Остановка поиска при первом найденном совпадении
+                fi
+              done
+
+              # Эвристическое распределение (Назначение маршрута на основе ключевых слов в имени)
+              if [[ "$fname" == *"direct"* || "$fname" == *"white"* ]]; then
+                echo "include:loc-$fname" >> ${{ env.DATA_PATH }}/ru-direct
+                echo "=> [Local - Rules] Файл $fname добавлен в список <ru-direct>"
+
+              elif [[ "$fname" == *"proxy"* || "$fname" == *"block"* || "$fname" == *"black"* ]]; then
+                echo "include:loc-$fname" >> ${{ env.DATA_PATH }}/ru-blocked
+                echo "=> [Local - Rules] Файл $fname добавлен в список <ru-blocked>"
+
+              elif [[ "$fname" == *"ads"* || "$fname" == *"spy"* ]]; then
+                echo "include:loc-$fname" >> ${{ env.DATA_PATH }}/category-ads-all
+                echo "=> [Local - Rules] Файл $fname добавлен в список <category-ads-all>"
+
+              # Обработка файлов без совпадений
+              if [ "$matched" = false ]; then
+                echo "=> Warning [Local - Rules] Локальный файл $fname пропущен, в названии отсутствуют допустимые ключи маршрутизации: $ALL_KEYS"
+              fi
+            done
+          fi
+
+      - name: Build V2Ray geosite.dat
+        run: |
+          # Выполнение генерации dat-файла (Устранение дубликатов, нормализация)
+          cd "${{ env.DLC_PATH }}"
+          go run ./ --datapath="../${{ env.DATA_PATH }}" --exportlists=ru-direct,ru-blocked,category-ads-all
+          
+          # Сохранение собранного geosite.dat в релизную директорию
+          cp publish/geosite.dat "../${{ env.OUTPUT_PATH }}/geosite.dat"
+
+      - name: Unpack V2Ray geosite.dat to text
+        uses: ./.github/actions/converters/dat/unpack
+        with:
+          input_file: ${{ env.OUTPUT_PATH }}/geosite.dat
+          output_path: ${{ env.OUTPUT_TEXT_PATH }}
+          type: geosite
+
+      - name: Prepare Staging Subsystem
+        run: |
+          # Выделение буферной директории для переименования исходников
+          mkdir -p staging
+          
+          # Копирование целевых текстовых файлов с применением финальных публичных имен конфигурации
+          [ -f "${{ env.OUTPUT_TEXT_PATH }}/geosite_ru-direct.txt" ] && \
+          cp "${{ env.OUTPUT_TEXT_PATH }}/geosite_ru-direct.txt" staging/geosite_direct.txt
+          
+          [ -f "${{ env.OUTPUT_TEXT_PATH }}/geosite_ru-blocked.txt" ] && \
+          cp "${{ env.OUTPUT_TEXT_PATH }}/geosite_ru-blocked.txt" staging/geosite_proxy.txt
+          
+          [ -f "${{ env.OUTPUT_TEXT_PATH }}/geosite_category-ads-all.txt" ] && \
+          cp "${{ env.OUTPUT_TEXT_PATH }}/geosite_category-ads-all.txt" staging/geosite_block.txt
+
+      # Сборка
+      - name: Build Plain Text Lists (.txt)
+        uses: ./.github/actions/converters/txt
+        with:
+          input_path: staging
+          output_path: ${{ env.OUTPUT_PATH }}
+
+      - name: Build Shadowrocket Rule-sets (_sr.list)
+        uses: ./.github/actions/converters/shadowrocket
+        with:
+          input_path: staging
+          output_path: ${{ env.OUTPUT_PATH }}
+
+      - name: Build Mihomo Rule-sets (.mrs)
+        uses: ./.github/actions/converters/mrs
+        with:
+          input_path: staging
+          output_path: ${{ env.OUTPUT_PATH }}
+
+      - name: Build Sing-box Rule-sets (.srs)
+        uses: ./.github/actions/converters/srs
+        with:
+          input_path: staging
+          output_path: ${{ env.OUTPUT_PATH }}
+
+      # Загрузка результатов
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: geosite-output
-          path: output
+          path: output/
