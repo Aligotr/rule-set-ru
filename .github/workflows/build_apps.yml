@@ -6,76 +6,147 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      BIN_PATH: bin # Относительно $(pwd)
+      CONFIG_PATH: .github/apps.yml
+      RAW_PATH: apps-raw
+      STAGING_PATH: staging
       OUTPUT_PATH: output
       OUTPUT_TEXT_PATH: output/text
 
     steps:
-      # Install dependencies
-      - name: Checkout
+      - name: Checkout User Codebase
         uses: actions/checkout@v4
 
-      - name: Install tools
+      # Инициализация базовой среды
+      - name: Setup YQ Environment
         run: |
-          echo "BIN_PATH=$(pwd)/${{ env.BIN_PATH }}" >> $GITHUB_ENV
-          mkdir -p ${{ env.BIN_PATH }}
+          # Установка YAML-парсера для чтения конфигурации сборки
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
 
-          # Sing-box
-          SB_URL=$(curl -s https://api.github.com/repos/SagerNet/sing-box/releases/latest | jq -r '.assets[] | select(.name | contains("linux-amd64.tar.gz")) | .browser_download_url')
-          curl -L "$SB_URL" | tar -xz --strip-components=1 -C ${{ env.BIN_PATH }}
-
-      - name: Prepare PATHs
+      - name: Initialize Workspace
         run: |
-          echo "${{ env.BIN_PATH }}" >> $GITHUB_PATH
-          mkdir -p ${{ env.OUTPUT_TEXT_PATH }}
+          # Выделение базовых директорий для рабочего процесса
+          mkdir -p \
+            "${{ env.RAW_PATH }}" \
+            "${{ env.STAGING_PATH }}" \
+            "${{ env.OUTPUT_PATH }}" \
+            "${{ env.OUTPUT_TEXT_PATH }}"
 
-      # Build
-      - name: Prepare sources
-        run: for f in apps/*; do mv "$f" "${{ env.OUTPUT_TEXT_PATH }}/apps_$(basename "$f")"; done
-
-      - name: Build Mihomo YAML
+      # Подготовка правил
+      - name: Prepare source rule-lists
         run: |
-          build_mrs() {
-              local name=$1
-              shift
-              local files=("$@")
+          set -euo pipefail
 
-              # Создание YAML: первая строка payload, затем остальные с форматированием
-              echo "payload:" > "${{ env.OUTPUT_PATH }}/${name}.yaml"
-              jq -r '[.rules[] | .rules[] | select(.process_name != null) | .process_name[]] | unique[] | "  - PROCESS-NAME," + .' "${files[@]}" >> "${{ env.OUTPUT_PATH }}/${name}.yaml"
-              jq -r '[.rules[] | .rules[] | select(.package_name != null) | .package_name[]] | unique[] | "  - PROCESS-NAME," + .' "${files[@]}" >> "${{ env.OUTPUT_PATH }}/${name}.yaml"
-          }
+          # Копирование исходных JSON-файлов в архив исходников
+          for f in apps/*.json; do
+            [ -e "$f" ] || continue
+            cp "$f" "${{ env.OUTPUT_TEXT_PATH }}/apps_$(basename "$f")"
+            echo "=> [Apps - Sources] Файл '$(basename "$f")' добавлен в архив исходников"
+          done
 
-          build_mrs "apps_direct" \
-              "${{ env.OUTPUT_TEXT_PATH }}/apps_torrent-clients.json"
-
-          build_mrs "apps_proxy" \
-              "${{ env.OUTPUT_TEXT_PATH }}/apps_ru-blocked.json"
-
-      - name: Build Sing-box SRS
+      - name: Create custom-lists from LOCAL rule-lists
         run: |
-          build_srs() {
-              local name=$1
-              shift
-              local files=("$@")
-              local buffer="temp.json"
-              trap 'rm -f "$buffer"' RETURN
+          set -euo pipefail
 
-              # Склейка json-файлов
-              jq -s '{version: .[0].version, rules: [.[].rules[]]}' "${files[@]}" > "$buffer"
-              # Компиляция
-              sing-box rule-set compile "$buffer" --output "${{ env.OUTPUT_PATH }}/${name}.srs"
-          }
+          declare -A ROUTE_MAP=()
 
-          build_srs "apps_direct" \
-              "${{ env.OUTPUT_TEXT_PATH }}/apps_torrent-clients.json"
+          while read -r key; do
+            ROUTE_MAP["$key"]="$(yq -r ".routing.\"$key\"" "${{ env.CONFIG_PATH }}")"
+          done < <(yq -r '.routing | keys[]' "${{ env.CONFIG_PATH }}")
 
-          build_srs "apps_proxy" \
-              "${{ env.OUTPUT_TEXT_PATH }}/apps_ru-blocked.json"
+          # Извлечение всех ключей словаря для логирования
+          # Замена пробелов на запятые для читабельного вывода
+          ALL_KEYS=$(printf "%s\n" "${!ROUTE_MAP[@]}" | paste -sd ", " -)
 
-      # Uploading results
-      - name: Upload Artifacts
+          declare -A GROUP_FILES=()
+
+          for file in apps/*.json; do
+            # Пропуск шага в случае отсутствия JSON-файлов
+            [ -e "$file" ] || continue
+
+            # Извлечение базового имени файла
+            fname=$(basename "$file" .json)
+
+            matched=false
+
+            # Эвристическое распределение (Назначение маршрута на основе ключевых слов в имени)
+            # Итерация по всем ключам словаря для поиска совпадений в имени файла
+            for key in "${!ROUTE_MAP[@]}"; do
+              if [[ "$fname" == *"$key"* ]]; then
+                # Извлечение целевой группы из словаря
+                dest="${ROUTE_MAP[$key]}"
+
+                GROUP_FILES["$dest"]+="$file"$'\n'
+                echo "=> [Apps - Rules] Файл '$fname' содержит ключ '$key', добавлен в список <$dest>"
+
+                matched=true
+                break # Остановка поиска при первом найденном совпадении
+              fi
+            done
+
+            # Обработка файлов без совпадений
+            if [ "$matched" = false ]; then
+              echo "=> Warning [Apps - Rules] Локальный файл $fname пропущен, в названии отсутствуют допустимые ключи маршрутизации: $ALL_KEYS"
+            fi
+          done
+
+          # Формирование merged-списков по целевым группам
+          for group in "${!GROUP_FILES[@]}"; do
+            tmp_list="${{ env.RAW_PATH }}/.${group}.list"
+            printf "%s" "${GROUP_FILES[$group]}" > "$tmp_list"
+
+            jq -s '
+              {
+                version: (.[0].version // 1),
+                rules: [ .[] | .rules[]? ]
+              }
+            ' $(sed '/^$/d' "$tmp_list") > "${{ env.STAGING_PATH }}/${group}.json"
+
+            rm -f "$tmp_list"
+            echo "=> [Apps - Rules] Список '$group' успешно сформирован"
+          done
+
+      - name: Prepare Staging Subsystem
+        run: |
+          set -euo pipefail
+
+          # Копирование целевых JSON-файлов с применением финальных публичных имен конфигурации
+          while IFS='=' read -r src_tag public_name; do
+            src_file="${{ env.STAGING_PATH }}/${src_tag}.json"
+            [ -f "$src_file" ] || continue
+
+            cp "$src_file" "${{ env.STAGING_PATH }}/${public_name}.json"
+            rm -f "$src_file"
+
+            echo "=> [Apps - Staging] Файл '$src_tag.json' подготовлен как '${public_name}.json'"
+          done < <(yq -r '.publish | to_entries[] | "\(.key)=\(.value)"' "${{ env.CONFIG_PATH }}")
+
+      # Сборка
+      - name: Build Mihomo App Rule-sets (.yaml, .mrs)
+        uses: ./.github/actions/converters/apps-mrs
+        with:
+          input_path: ${{ env.STAGING_PATH }}
+          output_path: ${{ env.OUTPUT_PATH }}
+
+      - name: Build Sing-box App Rule-sets (.srs)
+        uses: ./.github/actions/converters/apps-srs
+        with:
+          input_path: ${{ env.STAGING_PATH }}
+          output_path: ${{ env.OUTPUT_PATH }}
+
+      - name: Show Final Diagnostics
+        run: |
+          set -euo pipefail
+
+          echo "=> [Apps - Diagnostics] Финальное содержимое output"
+          find "${{ env.OUTPUT_PATH }}" -maxdepth 1 -type f | sort
+
+          echo "=> [Apps - Diagnostics] Финальный размер output:"
+          du -sh "${{ env.OUTPUT_PATH }}"
+
+      # Загрузка результатов
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: apps-output
-          path: output
+          path: output/
