@@ -2,6 +2,7 @@ lists:
   ru-whitelist:
     - yandex
     - vk
+    - dns-whitelist
 
   ru-direct:
     - ru-whitelist
@@ -9,6 +10,7 @@ lists:
 
   ru-blocked:
     - blocked
+    - dns-proxy
 
 publish:
   ru-whitelist: geoip_whitelist
@@ -21,33 +23,5 @@ sources:
     - https://www.cloudflare.com/ips-v4
     - https://raw.githubusercontent.com/GhostRooter0953/discord-voice-ips/master/voice_domains/discord-voice-ip-list
 
-asn_groups:
-  yandex:
-    - AS13238   # YANDEX LLC
-    - AS199295  # Yandex Cloud
-    - AS205830  # Yandex.Cloud LLC
-    - AS207581  # Yandex.Cloud
-    - AS207970  # Yandex infrastructure
-    - AS21051   # Yandex hosting
-    - AS211963  # Yandex Cloud subnetworks
-    - AS213235  # Yandex.Cloud
-    - AS28709   # Yandex LLC
-    - AS47541   # Yandex CDN
-    - AS47542   # Yandex network
-    - AS47764   # Yandex infrastructure
-    - AS49797   # Yandex services
-    - AS49988   # Yandex services
-    - AS57973   # Yandex.Cloud
-    - AS60476   # Yandex Cloud
-    - AS60863   # Yandex infrastructure
-    - AS61178   # Yandex Cloud
-    - AS62243   # Yandex LLC
-    - AS201817  # Yandex Cloud
-
-  vk:
-    - AS204706  # VK / Mail.ru network
-
-  gosuslugi:
-    - AS12389   # Rostelecom / government hosting
-    - AS198610  # Gosuslugi-related infrastructure
-    - AS200350  # Government digital services
+asn_path: asn
+ips_path: ips
