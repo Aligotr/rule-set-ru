@@ -403,7 +403,6 @@ jobs:
           fi
 
           if [ -f "output/geoip.dat" ]; then
-            mv "output/geoip.dat" "${{ env.OUTPUT_PATH }}/geoip.dat"
             echo "=> [GeoIP - Output] Файл 'geoip.dat' сохранен"
           fi
 
