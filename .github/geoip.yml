@@ -1,29 +1,31 @@
+country_code: ru
+
 asn_lists:
-  ru-whitelist:
+  whitelist:
     - yandex
     - vk
 
-  ru-direct:
-    - ru-whitelist
+  direct:
+    - whitelist
     - gosuslugi
 
-  ru-blocked: []
+  blocked: []
 
 ip_lists:
-  ru-whitelist:
+  whitelist:
     - dns-whitelist
 
-  ru-direct:
-    - ru-whitelist
+  direct:
+    - whitelist
 
-  ru-blocked:
+  blocked:
     - blocked
     - dns-proxy
 
 publish:
-  ru-whitelist: geoip_whitelist
-  ru-direct: geoip_direct
-  ru-blocked: geoip_proxy
+  whitelist: whitelist
+  direct: direct
+  blocked: proxy
 
 sources:
   blocked:
