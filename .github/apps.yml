@@ -1,6 +1,6 @@
 publish:
-  direct: apps_direct
-  proxy: apps_proxy
+  direct: direct
+  proxy: proxy
 
 lists_local:
   direct:
