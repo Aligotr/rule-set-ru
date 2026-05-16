@@ -136,19 +136,11 @@ jobs:
 
       - name: Build V2Ray geosite.dat
         run: |
-          # Выполнение генерации dat-файла (Устранение дубликатов, нормализация)
           cd "${{ env.DLC_PATH }}"
-          go run ./ --datapath="../${{ env.DATA_PATH }}" --exportlists=ru-direct,ru-blocked,category-ads-all
-          
-          # Сохранение собранного geosite.dat в релизную директорию
-          cp publish/geosite.dat "../${{ env.OUTPUT_PATH }}/geosite.dat"
-
-      - name: Unpack V2Ray geosite.dat to text
-        uses: ./.github/actions/converters/dat/unpack
-        with:
-          input_file: ${{ env.OUTPUT_PATH }}/geosite.dat
-          output_path: ${{ env.OUTPUT_TEXT_PATH }}
-          type: geosite
+          go run ./ --datapath="../${{ env.DATA_PATH }}" \
+                    --outputdir="../${{ env.OUTPUT_PATH }}" \
+                    --exportlists=ru-direct,ru-blocked,category-ads-all
+          cd ..
 
       - name: Prepare Staging Subsystem
         run: |
@@ -156,14 +148,20 @@ jobs:
           mkdir -p staging
           
           # Копирование целевых текстовых файлов с применением финальных публичных имен конфигурации
-          [ -f "${{ env.OUTPUT_TEXT_PATH }}/geosite_ru-direct.txt" ] && \
-          cp "${{ env.OUTPUT_TEXT_PATH }}/geosite_ru-direct.txt" staging/geosite_direct.txt
+          if [ -f "${{ env.OUTPUT_PATH }}/ru-direct.txt" ]; then
+            cp "${{ env.OUTPUT_PATH }}/ru-direct.txt" staging/geosite_direct.txt
+            mv "${{ env.OUTPUT_PATH }}/ru-direct.txt" "${{ env.OUTPUT_TEXT_PATH }}/geosite_ru-direct.txt"
+          fi
           
-          [ -f "${{ env.OUTPUT_TEXT_PATH }}/geosite_ru-blocked.txt" ] && \
-          cp "${{ env.OUTPUT_TEXT_PATH }}/geosite_ru-blocked.txt" staging/geosite_proxy.txt
+          if [ -f "${{ env.OUTPUT_PATH }}/ru-blocked.txt" ]; then
+            cp "${{ env.OUTPUT_PATH }}/ru-blocked.txt" staging/geosite_proxy.txt
+            mv "${{ env.OUTPUT_PATH }}/ru-blocked.txt" "${{ env.OUTPUT_TEXT_PATH }}/geosite_ru-blocked.txt"
+          fi
           
-          [ -f "${{ env.OUTPUT_TEXT_PATH }}/geosite_category-ads-all.txt" ] && \
-          cp "${{ env.OUTPUT_TEXT_PATH }}/geosite_category-ads-all.txt" staging/geosite_block.txt
+          if [ -f "${{ env.OUTPUT_PATH }}/category-ads-all.txt" ]; then
+            cp "${{ env.OUTPUT_PATH }}/category-ads-all.txt" staging/geosite_block.txt
+            mv "${{ env.OUTPUT_PATH }}/category-ads-all.txt" "${{ env.OUTPUT_TEXT_PATH }}/geosite_category-ads-all.txt"
+          fi
 
       # Сборка
       - name: Build Plain Text Lists (.txt)
