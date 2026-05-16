@@ -1,12 +1,12 @@
 country_code: ru
 
 publish:
-  whitelist: geosite_whitelist
-  direct: geosite_direct
-  blocked: geosite_proxy
-  category-ads: geosite_block
+  whitelist: whitelist
+  direct: direct
+  blocked: proxy
+  category-ads: block
 
-community_lists:
+lists_community:
   whitelist:
     - vk
     - yandex
@@ -30,11 +30,7 @@ community_lists:
     - winspy
     - adguard
 
-community_expose:
-  - youtube
-  - telegram
-
-local_lists:
+lists_local:
   whitelist: []
 
   direct:
@@ -44,6 +40,10 @@ local_lists:
     - a-proxy
 
   category-ads: []
+
+lists_community_expose:
+  - youtube
+  - telegram
 
 sources:
   winspy:
