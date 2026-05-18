@@ -33,7 +33,7 @@ runs:
           jq -r '
             [.rules[] | .rules[] | select(.package_name != null) | .package_name[]]
             | unique[]
-            | "  - PACKAGE-NAME," + .
+            | "  - PROCESS-NAME," + .
           ' "$file" >> "${{ inputs.output_path }}/${name}.yaml"
 
           echo "=> [Apps-YAML] Завершено форматирование (${name}.yaml)"
