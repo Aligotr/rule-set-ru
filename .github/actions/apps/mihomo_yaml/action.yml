@@ -40,9 +40,9 @@ runs:
           # Если после заголовка ничего не добавилось — файл бесполезен, удаляем
           if [ "$(wc -l < "$out")" -le 1 ]; then
             rm -f "$out"
-            echo "=> [APP - Mihomo - YAML] пропуск (правила не найдены): $name"
+            echo "=> [APP-Mihomo-YAML] пропуск (правила не найдены): $name"
           else
-            echo "=> [APP - Mihomo - YAML]  Завершено форматирование: $(basename "$out")"
+            echo "=> [APP-Mihomo-YAML]  Завершено форматирование: $(basename "$out")"
           fi
         }
 
@@ -55,6 +55,6 @@ runs:
         elif [ -f "${{ inputs.input_path }}" ]; then
           process_file "${{ inputs.input_path }}"
         else
-          echo "=> [APP - Mihomo - YAML] правила не найдены: ${{ inputs.input_path }}"
+          echo "=> [APP-Mihomo-YAML] правила не найдены: ${{ inputs.input_path }}"
           exit 1
         fi
