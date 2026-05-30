@@ -57,17 +57,17 @@ jobs:
 
           echo "=> [GeoIP - Build] Сборка GeoIP завершена"
 
-      - name: Rename output files with prefix
+      - name: Rename output files
         run: |
           set -euo pipefail
 
           find "${{ env.OUTPUT_PATH }}" -maxdepth 1 -type f | while read -r file; do
             dir=$(dirname "$file")
             base=$(basename "$file")
-            mv "$file" "$dir/geoip_$base"
+            new_name="${dir}/geoip_${base#ru-}"
+            mv "$file" "$new_name"
+            echo "=> [GeoIP - Rename] $base -> $(basename "$new_name")"
           done
-
-          echo "=> [GeoIP - Rename] Файлы переименованы с префиксом 'geoip_'"
 
       - name: Show Final Diagnostics
         run: |
