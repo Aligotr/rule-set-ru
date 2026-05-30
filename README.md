@@ -20,15 +20,6 @@
     - ➡️ https://github.com/aligotr/rule-set-ru/releases/latest/download/geosite_direct.srs
     - 🔁 https://github.com/aligotr/rule-set-ru/releases/latest/download/geosite_proxy.srs
     - 🚫 https://github.com/aligotr/rule-set-ru/releases/latest/download/geosite_block.srs
-- 📦 **Apps**
-  - _Mihomo.yaml_
-    - ➡️ https://github.com/aligotr/rule-set-ru/releases/latest/download/apps_direct.yaml
-    - 🔁 https://github.com/aligotr/rule-set-ru/releases/latest/download/apps_proxy.yaml
-  - _Sing-box.srs_
-    - ➡️ https://github.com/aligotr/rule-set-ru/releases/latest/download/apps_direct.srs
-    - 🔁 https://github.com/aligotr/rule-set-ru/releases/latest/download/apps_proxy.srs
-- 🗜 **Дополнительно**
-  - [Исходные текстовые списки (.zip)](../../releases/latest/download/sources.zip)
 
 ## 📁Состав
 
@@ -41,10 +32,6 @@
   - geosite_direct  - private, category-gov-ru
   - geosite_block   - win-spy, category-ads-all
   - geosite_proxy   - ru-blocked (antifilter-community, re-filter), youtube, discord
-
-**Apps**
-  - apps_direct  - torrent-clients
-  - apps_proxy   - ru-blocked(discord, chatgpt...)
 
 ## 📦 Как использовать
 
