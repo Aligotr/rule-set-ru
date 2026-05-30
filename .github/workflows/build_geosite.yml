@@ -112,6 +112,19 @@ jobs:
 
             internal_name=$(make_internal_name "$logical_name")
             out="${{ env.DATA_PATH }}/$internal_name"
+            
+            has_community=$(yq -r ".lists_community.\"$logical_name\"[]?" "${{ env.CONFIG_PATH }}" | grep -c . || true)
+            has_local=$(yq -r ".lists_local.\"$logical_name\"[]?" "${{ env.CONFIG_PATH }}" | grep -c . || true)
+            
+            if [ "$has_community" -eq 0 ] && [ "$has_local" -eq 0 ]; then
+              if [ -f "$out" ]; then
+                echo "=> [Config - Rules] Список '$internal_name' уже существует, пропускаем"
+              else
+                echo "=> Warning [Config - Rules] Список '$internal_name' пуст и не найден в community/data" >&2
+              fi
+              continue
+            fi
+            
             : > "$out"
 
             while read -r item; do
