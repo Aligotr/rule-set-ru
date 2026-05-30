@@ -6,6 +6,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
+      COUTRY_PREFIX: ru
       GEOIP_PATH: geoip
       OUTPUT_PATH: output
       GEOLITE2_PATH: geolite2
@@ -64,7 +65,7 @@ jobs:
           find "${{ env.OUTPUT_PATH }}" -maxdepth 1 -type f | while read -r file; do
             dir=$(dirname "$file")
             base=$(basename "$file")
-            new_name="${dir}/geoip_${base#ru-}"
+            new_name="${dir}/geoip_${base#${{ env.COUTRY_PREFIX }}-}"
             mv "$file" "$new_name"
             echo "=> [GeoIP - Rename] $base -> $(basename "$new_name")"
           done
