@@ -1,21 +1,18 @@
 country_code: ru
 
 publish:
-  whitelist: whitelist
   direct: direct
   blocked: proxy
   category-ads: block
+  youtube: youtube
+  bitwarden: bitwarden
 
 lists_community:
-  whitelist:
+  direct:
     - vk
     - yandex
-
-  direct:
-    - whitelist
     - category-gov-ru
     - x5
-    - bitwarden
 
   blocked:
     - antifilter
@@ -31,8 +28,6 @@ lists_community:
     - adguard
 
 lists_local:
-  whitelist: []
-
   direct:
     - a-direct
 
