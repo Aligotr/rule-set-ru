@@ -12,7 +12,6 @@ jobs:
       BUILD_DATA_PATH: build-data
       OUTPUT_PREFIX: geosite
       OUTPUT_PATH: output
-      OUTPUT_TEXT_PATH: output/text
       STAGING_PATH: staging
 
     steps:
@@ -271,8 +270,7 @@ jobs:
             src_file="${{ env.OUTPUT_PATH }}/${internal_name}.txt"
             [ -f "$src_file" ] || continue
 
-            cp "$src_file" "${{ env.STAGING_PATH }}/${output_name}.txt"
-            mv "$src_file" "${{ env.OUTPUT_TEXT_PATH }}/${output_name}.txt"
+            mv "$src_file" "${{ env.STAGING_PATH }}/${output_name}.txt"
 
             echo "=> [Staging] Файл '${internal_name}.txt' подготовлен как '${output_name}.txt'"
           done < <(yq -r '.publish | to_entries[] | "\(.key)=\(.value)"' "${{ env.CONFIG_PATH }}")
