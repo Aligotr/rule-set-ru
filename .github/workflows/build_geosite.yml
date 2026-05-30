@@ -35,18 +35,37 @@ jobs:
       - name: Setup YQ Environment
         run: |
           # Установка YAML-парсера для чтения конфигурации сборки
-          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          YQ_VERSION="v4.44.3"
+          sudo wget -qO /usr/local/bin/yq "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64"
           sudo chmod +x /usr/local/bin/yq
 
       - name: Initialize Workspace
         run: |
           # Выделение базовых директорий для рабочего процесса
           mkdir -p \
-            "${{ env.RAW_BUILD_DATA_PATH }}" \
-            "${{ env.BUILD_DATA_PATH }}" \
             "${{ env.OUTPUT_PATH }}" \
             "${{ env.OUTPUT_TEXT_PATH }}" \
             "${{ env.STAGING_PATH }}"
+
+      - name: Setup Shell Helpers
+        run: |
+          # Формирование файла общих хелперов для переиспользования между шагами
+          COUNTRY_CODE=$(yq -r '.country_code' "${{ env.CONFIG_PATH }}")
+          PREFIXED_LISTS=$(yq -r '.prefixed_lists[]?' "${{ env.CONFIG_PATH }}" | paste -sd '|' -)
+
+          cat > /tmp/geosite-helpers.sh << EOF
+          COUNTRY_CODE="${COUNTRY_CODE}"
+          PREFIXED_LISTS="${PREFIXED_LISTS}"
+
+          make_internal_name() {
+            local name="\$1"
+            if [[ -n "\${PREFIXED_LISTS}" && "|\${PREFIXED_LISTS}|" == *"|\${name}|"* ]]; then
+              printf '%s-%s\n' "\${COUNTRY_CODE}" "\$name"
+            else
+              printf '%s\n' "\$name"
+            fi
+          }
+          EOF
 
       # Подготовка правил
       - name: Ingress External Data into V2Ray
@@ -74,7 +93,7 @@ jobs:
                 grep -vi "t.co" > "${{ env.DATA_PATH }}/$name"
                 ;;
               *)
-                echo "=> Warning [External - Rules] Неизвестный формат '$format' для списка '$name'"
+                echo "=> Warning [External - Rules] Неизвестный формат '$format' для списка '$name'" >&2
                 exit 1
                 ;;
             esac
@@ -85,21 +104,7 @@ jobs:
       - name: Create custom-lists from CONFIG rule-lists
         run: |
           set -euo pipefail
-
-          COUNTRY_CODE=$(yq -r '.country_code' "${{ env.CONFIG_PATH }}")
-
-          make_internal_name() {
-            local name="$1"
-
-            case "$name" in
-              whitelist|direct|blocked)
-                printf '%s-%s\n' "$COUNTRY_CODE" "$name"
-                ;;
-              *)
-                printf '%s\n' "$name"
-                ;;
-            esac
-          }
+          source /tmp/geosite-helpers.sh
 
           # Формирование пользовательских meta-списков по конфигурации
           while read -r logical_name; do
@@ -113,7 +118,7 @@ jobs:
               [ -n "$item" ] || continue
               include_name=$(make_internal_name "$item")
               echo "include:$include_name" >> "$out"
-            done < <(yq -r ".lists_community.\"$logical_name\"[]" "${{ env.CONFIG_PATH }}")
+            done < <(yq -r ".lists_community.\"$logical_name\"[]?" "${{ env.CONFIG_PATH }}")
 
             while read -r item; do
               [ -n "$item" ] || continue
@@ -123,9 +128,9 @@ jobs:
                 echo "include:${item}" >> "$out"
                 echo "=> [Local - Rules] Файл '${item}.txt' добавлен в список <$internal_name>"
               else
-                echo "=> Warning [Local - Rules] Локальный файл '${item}.txt' не найден"
+                echo "=> Warning [Local - Rules] Локальный файл '${item}.txt' не найден" >&2
               fi
-            done < <(yq -r ".lists_local.\"$logical_name\"[]" "${{ env.CONFIG_PATH }}")
+            done < <(yq -r ".lists_local.\"$logical_name\"[]?" "${{ env.CONFIG_PATH }}")
 
             echo "=> [Config - Rules] Список '$internal_name' успешно сформирован"
           done < <(yq -r '.publish | keys[]' "${{ env.CONFIG_PATH }}")
@@ -133,21 +138,7 @@ jobs:
       - name: Resolve minimal V2Ray data-tree
         run: |
           set -euo pipefail
-
-          COUNTRY_CODE=$(yq -r '.country_code' "${{ env.CONFIG_PATH }}")
-
-          make_internal_name() {
-            local name="$1"
-
-            case "$name" in
-              whitelist|direct|blocked)
-                printf '%s-%s\n' "$COUNTRY_CODE" "$name"
-                ;;
-              *)
-                printf '%s\n' "$name"
-                ;;
-            esac
-          }
+          source /tmp/geosite-helpers.sh
 
           # Очистка директории минимального дерева правил
           rm -rf "${{ env.RAW_BUILD_DATA_PATH }}" "${{ env.BUILD_DATA_PATH }}"
@@ -159,12 +150,12 @@ jobs:
             local file="${{ env.DATA_PATH }}/$name"
 
             if [ ! -f "$file" ]; then
-              echo "=> Warning [Resolver] Файл '$name' не найден в исходной директории правил"
+              echo "=> Warning [Resolver] Файл '$name' не найден в исходной директории правил" >&2
               return 0
             fi
 
             if [[ "|$stack|" == *"|$name|"* ]]; then
-              echo "=> Warning [Resolver] Обнаружена циклическая зависимость в списке '$name'"
+              echo "=> Warning [Resolver] Обнаружена циклическая зависимость в списке '$name'" >&2
               return 0
             fi
 
@@ -248,21 +239,7 @@ jobs:
       - name: Prepare Staging Subsystem
         run: |
           set -euo pipefail
-
-          COUNTRY_CODE=$(yq -r '.country_code' "${{ env.CONFIG_PATH }}")
-
-          make_internal_name() {
-            local name="$1"
-
-            case "$name" in
-              whitelist|direct|blocked)
-                printf '%s-%s\n' "$COUNTRY_CODE" "$name"
-                ;;
-              *)
-                printf '%s\n' "$name"
-                ;;
-            esac
-          }
+          source /tmp/geosite-helpers.sh
 
           make_public_name() {
             local name="$1"
@@ -273,7 +250,9 @@ jobs:
           mkdir -p "${{ env.STAGING_PATH }}"
 
           # Копирование целевых текстовых файлов с применением финальных публичных имен конфигурации
-          while IFS='=' read -r src_tag public_name; do
+          while read -r entry; do
+            src_tag="${entry%%=*}"
+            public_name="${entry#*=}"
             internal_name=$(make_internal_name "$src_tag")
             output_name=$(make_public_name "$public_name")
             src_file="${{ env.OUTPUT_PATH }}/${internal_name}.txt"
