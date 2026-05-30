@@ -24,7 +24,7 @@
         "mediaget_crashpad_handler.exe",
         "uFiler.exe",
         "TorrServer-windows-386.exe",
-        "TorrServer-windows-amd64.exe",
+        "TorrServer-windows-amd64.exe"
       ]
     }
   ]
