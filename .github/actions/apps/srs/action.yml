@@ -60,7 +60,12 @@ runs:
         mkdir -p "${{ inputs.output_path }}"
 
         if [ -d "${{ inputs.input_path }}" ]; then
-          for f in "${{ inputs.input_path }}"/*.json; do [ -f "$f" ] && process_file "$f"; done
+          for f in "${{ inputs.input_path }}"/*.json; do
+            [ -f "$f" ] && process_file "$f"
+          done
         elif [ -f "${{ inputs.input_path }}" ]; then
           process_file "${{ inputs.input_path }}"
+        else
+          echo "=> [Apps-SRS] правила не найдены: ${{ inputs.input_path }}"
+          exit 1
         fi
