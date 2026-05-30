@@ -1,15 +1,15 @@
 publish:
-  windows-direct: windows-direct
-  windows-proxy: windows-proxy
-  android-proxy: android-proxy
+  windows_direct: windows_direct
+  windows_proxy: windows_proxy
+  android_proxy: android_proxy
 
 lists_local:
-  windows-direct:
-    - windows-torrent-clients
-    - windows-games
+  windows_direct:
+    - windows_torrent-clients
+    - windows_games
 
-  windows-proxy:
-    - windows-proxy
+  windows_proxy:
+    - windows_proxy
 
-  android-proxy:
-    - android-proxy
+  android_proxy:
+    - android_proxy
