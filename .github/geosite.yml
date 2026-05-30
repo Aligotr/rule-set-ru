@@ -10,6 +10,7 @@ publish:
   category-ads: block
   youtube: youtube
   bitwarden: bitwarden
+  steam: steam
 
 lists_community:
   direct:
