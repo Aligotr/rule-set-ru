@@ -1,5 +1,9 @@
 country_code: ru
 
+prefixed_lists:
+  - direct
+  - blocked
+
 publish:
   direct: direct
   blocked: proxy
