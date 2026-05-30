@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "rules": [
+    {
+      "process_name": [
+        "cs2.exe",
+        "dota2.exe",
+
+        "EasyAntiCheat.exe",
+        "EasyAntiCheat_EOS.exe",
+        "BattleBitEAC.exe",
+        "start_protected_game.exe",
+        "denuvo-anti-cheat-update-service.exe",
+        "codefusion.technology",
+        "TslGame_BE.exe",
+        "TslGame_ZK.exe",
+        "faceitservice.exe",
+        "faceitclient.exe",
+        "SGuard64.exe",
+        "SGuardSvc64.exe",
+        "SGuardUpdate64.exe",
+        "ACE-Service64.exe"
+      ]
+    }
+  ]
+}
