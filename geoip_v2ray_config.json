@@ -54,7 +54,7 @@
       "type": "maxmindGeoLite2ASNCSV",
       "action": "add",
       "args": {
-        "uri": "https://raw.githubusercontent.com/Loyalsoldier/geoip/release/GeoLite2-ASN-Blocks-IPv4.csv",
+        "ipv4": "./geolite2/GeoLite2-ASN-Blocks-IPv4.csv",
         "wantedList": {
           "ru-direct": [
             // gosuslugi
