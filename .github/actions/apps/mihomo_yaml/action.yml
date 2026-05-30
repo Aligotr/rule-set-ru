@@ -1,49 +1,60 @@
-name: Generate Apps YAML
-description: Формирование app-правил маршрутизации в формат YAML
-
+name: Generate Apps Mihomo YAML
+description: Формирование app-правил маршрутизации в формат Mihomo YAML rule-set
+ 
 inputs:
   input_path:
     description: Директория или путь к исходному JSON-файлу
     required: true
   output_path:
-    description: Директория для сохранения результатов обработки
+    description: Директория для сохранения результатов
     required: true
 
 runs:
   using: composite
   steps:
-    - name: Compile Apps Mihomo YAML
+    - name: Compile Mihomo YAML
       shell: bash
       run: |
+        set -euo pipefail
+ 
         process_file() {
           local file="$1"
-          local name="$(basename "$file" .json)"
-          local suffix="_m"
-
-          [ -s "$file" ] || return 0
+          local name
+          name="$(basename "$file" .json)"
+          local out="${{ inputs.output_path }}/${name}_mihomo.yaml"
+ 
+          [ -s "$file" ] || { echo "=> [Mihomo] skipped (empty): $file"; return 0; }
 
           # Создание YAML: первая строка payload, затем остальные с форматированием
-          echo "payload:" > "${{ inputs.output_path }}/${name}${suffix}.yaml"
-
-          jq -r '
-            [.rules[] | .rules[] | select(.process_name != null) | .process_name[]]
-            | unique[]
-            | "  - PROCESS-NAME," + .
-          ' "$file" >> "${{ inputs.output_path }}/${name}${suffix}.yaml"
-
-          jq -r '
-            [.rules[] | .rules[] | select(.package_name != null) | .package_name[]]
-            | unique[]
-            | "  - PROCESS-NAME," + .
-          ' "$file" >> "${{ inputs.output_path }}/${name}${suffix}.yaml"
-
-          echo "=> [Apps-YAML] Завершено форматирование (${name}${suffix}.yaml)"
+          # package_name → PROCESS-NAME (поведение Mihomo для Android)
+          {
+            echo "payload:"
+            jq -r '
+              ( [ .rules[]? | .rules[]? | select(.process_name) | .process_name[] ]
+              + [ .rules[]? | .rules[]? | select(.package_name) | .package_name[] ] )
+              | unique[]
+              | "  - PROCESS-NAME," + .
+            ' "$file"
+          } > "$out"
+ 
+          # Если после заголовка ничего не добавилось — файл бесполезен, удаляем
+          if [ "$(wc -l < "$out")" -le 1 ]; then
+            rm -f "$out"
+            echo "=> [APP - Mihomo - YAML] пропуск (правила не найдены): $name"
+          else
+            echo "=> [APP - Mihomo - YAML]  Завершено форматирование: $(basename "$out")"
+          fi
         }
 
         mkdir -p "${{ inputs.output_path }}"
 
         if [ -d "${{ inputs.input_path }}" ]; then
-          for f in "${{ inputs.input_path }}"/*.json; do [ -f "$f" ] && process_file "$f"; done
+          for f in "${{ inputs.input_path }}"/*.json; do
+            [ -f "$f" ] && process_file "$f"
+          done
         elif [ -f "${{ inputs.input_path }}" ]; then
           process_file "${{ inputs.input_path }}"
+        else
+          echo "=> [APP - Mihomo - YAML] правила не найдены: ${{ inputs.input_path }}"
+          exit 1
         fi
