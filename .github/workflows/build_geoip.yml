@@ -8,6 +8,7 @@ jobs:
     env:
       GEOIP_PATH: geoip
       OUTPUT_PATH: output
+      GEOLITE2_PATH: geolite2
 
     steps:
       - name: Checkout User Codebase
@@ -31,7 +32,18 @@ jobs:
 
           mkdir -p \
             "${{ env.GEOIP_PATH }}" \
-            "${{ env.OUTPUT_PATH }}"
+            "${{ env.OUTPUT_PATH }}" \
+            "${{ env.GEOLITE2_PATH }}"
+
+      - name: Download GeoLite2 ASN Data
+        run: |
+          set -euo pipefail
+
+          curl -fsSL \
+            "https://raw.githubusercontent.com/Loyalsoldier/geoip/release/GeoLite2-ASN-Blocks-IPv4.csv" \
+            -o "${{ env.GEOLITE2_PATH }}/GeoLite2-ASN-Blocks-IPv4.csv"
+
+          echo "=> [GeoIP - Download] GeoLite2-ASN-Blocks-IPv4.csv загружен"
 
       - name: Build GeoIP
         run: |
