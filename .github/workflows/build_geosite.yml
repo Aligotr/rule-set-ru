@@ -10,9 +10,9 @@ jobs:
       DATA_PATH: community/data
       RAW_BUILD_DATA_PATH: build-data-raw
       BUILD_DATA_PATH: build-data
+      STAGING_PATH: staging
       OUTPUT_PREFIX: geosite
       OUTPUT_PATH: output
-      STAGING_PATH: staging
 
     steps:
       - name: Checkout User Codebase
@@ -42,9 +42,8 @@ jobs:
         run: |
           # Выделение базовых директорий для рабочего процесса
           mkdir -p \
-            "${{ env.OUTPUT_PATH }}" \
-            "${{ env.OUTPUT_TEXT_PATH }}" \
-            "${{ env.STAGING_PATH }}"
+            "${{ env.STAGING_PATH }}" \
+            "${{ env.OUTPUT_PATH }}"
 
       - name: Setup Shell Helpers
         run: |
