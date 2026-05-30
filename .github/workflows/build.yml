@@ -49,34 +49,6 @@ jobs:
           name: apps-output
           path: release
 
-      - name: Archive source files
-        run: |
-          set -euo pipefail
-
-          # Упаковка директории исходников в единый архив
-          if [ -d "release/text" ]; then
-            cd release/text
-            zip -r ../sources.zip .
-            cd ../..
-            rm -rf release/text
-            echo "=> [Release] Архив sources.zip успешно сформирован"
-          else
-            echo "=> [Release] Директория release/text отсутствует, упаковка пропущена"
-          fi
-
-      # - name: Generate SHA256 checksums
-      #   run: |
-      #     set -euo pipefail
-
-      #     cd release
-
-      #     # Формирование hash-файлов для всех файлов релиза
-      #     find . -maxdepth 1 -type f ! -name '*.sha256sum' -print0 | while IFS= read -r -d '' file; do
-      #       clean_name="${file#./}"
-      #       sha256sum "$clean_name" > "${clean_name}.sha256sum"
-      #       echo "=> [Release] Хэш-файл создан: ${clean_name}.sha256sum"
-      #     done
-
       - name: Show release diagnostics
         run: |
           set -euo pipefail
