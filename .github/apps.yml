@@ -1,10 +1,15 @@
 publish:
-  direct: direct
-  proxy: proxy
+  pc-direct: pc-direct
+  pc-proxy: pc-proxy
+  android-proxy: android-proxy
 
 lists_local:
-  direct:
-    - torrent-clients
+  pc-direct:
+    - pc-torrent-clients
+    - pc-games
 
-  proxy:
-    - ru-blocked
+  pc-proxy:
+    - pc-proxy
+
+  android-proxy:
+    - android-proxy
