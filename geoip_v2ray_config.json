@@ -13,7 +13,16 @@
       "action": "add",
       "args": {
         "name": "ru-blocked",
-        "uri": "https://www.cloudflare.com/ips-v4"
+        "uri": "https://raw.githubusercontent.com/GhostRooter0953/discord-voice-ips/master/voice_domains/discord-voice-ip-list"
+      }
+    },
+
+    {
+      "type": "text",
+      "action": "add",
+      "args": {
+        "name": "ru-blocked",
+        "uri": "./cloudflare.txt"
       }
     },
     {
@@ -21,32 +30,65 @@
       "action": "add",
       "args": {
         "name": "ru-blocked",
-        "uri": "https://raw.githubusercontent.com/GhostRooter0953/discord-voice-ips/master/voice_domains/discord-voice-ip-list"
+        "uri": "./cloudfront.txt"
       }
     },
     {
-      "type": "maxmindMMDB",
+      "type": "text",
       "action": "add",
       "args": {
-        "uri": "https://github.com/Loyalsoldier/geoip/raw/release/GeoLite2-Country.mmdb",
-        "wantedList": ["ru"]
+        "name": "ru-blocked",
+        "uri": "./facebook.txt"
       }
     },
+    {
+      "type": "text",
+      "action": "add",
+      "args": {
+        "name": "ru-blocked",
+        "uri": "./telegram.txt"
+      }
+    },
+
     {
       "type": "maxmindGeoLite2ASNCSV",
       "action": "add",
       "args": {
-        "ipv4": "./geolite2/GeoLite2-ASN-Blocks-IPv4.csv",
         "wantedList": {
-          "ru-whitelist": [
-            "AS47764", "AS199295", "AS207970", "AS21051", "AS47542",
-            "AS60863", "AS47541", "AS62243", "AS49988", "AS57973",
-            "AS207581", "AS213235", "AS28709", "AS201817", "AS49797",
-            "AS60476", "AS211963", "AS61178", "AS205830", "AS13238"
+          "ru-direct": [
+            // gosuslugi
+            "AS12389",
+            "AS198610",
+            "AS200350",
+            // vk
+            "AS204706",
+            "AS47764",
+            // yandex
+            "AS13238",
+            "AS199295",
+            "AS205830",
+            "AS207581",
+            "AS207970",
+            "AS21051 ",
+            "AS211963",
+            "AS213235",
+            "AS28709",
+            "AS47541",
+            "AS47542",
+            "AS47764",
+            "AS49797",
+            "AS49988",
+            "AS57973",
+            "AS60476",
+            "AS60863",
+            "AS61178",
+            "AS62243",
+            "AS201817"
           ]
         }
       }
     },
+
     {
       "type": "private",
       "action": "add"
@@ -56,10 +98,7 @@
       "action": "remove",
       "args": {
         "name": "private",
-        "ipOrCIDR": [
-          "0.0.0.0/8",
-          "::/128"
-        ]
+        "ipOrCIDR": ["0.0.0.0/8", "::/128"]
       }
     }
   ],
@@ -68,18 +107,18 @@
       "type": "v2rayGeoIPDat",
       "action": "output",
       "args": {
+        "onlyIPType": "ipv4",
         "outputDir": "output",
-        "outputName": "geoip.dat",
-        "onlyIPType": "ipv4"
+        "outputName": "geoip.dat"
       }
     },
     {
       "type": "singboxSRS",
       "action": "output",
       "args": {
-        "outputName": "geoip.dat",
         "onlyIPType": "ipv4",
-        "wantedList": ["ru-whitelist", "ru-blocked"]
+        "outputDir": "output",
+        "wantedList": ["ru-direct", "ru-blocked"]
       }
     },
     {
@@ -87,7 +126,8 @@
       "action": "output",
       "args": {
         "onlyIPType": "ipv4",
-        "wantedList": ["ru-whitelist", "ru-blocked"]
+        "outputDir": "output",
+        "wantedList": ["ru-direct", "ru-blocked"]
       }
     },
     {
@@ -95,16 +135,10 @@
       "action": "output",
       "args": {
         "onlyIPType": "ipv4",
-        "wantedList": ["ru", "ru-whitelist", "ru-blocked"],
-        "outputExtension": ".lst"
-      },
-    },
-    {
-      "type": "text",
-      "action": "output",
-      "args": {
-        "onlyIPType": "ipv4",
-        "wantedList": ["ru-whitelist", "ru-blocked"]
+        "outputDir": "output",
+        "wantedList": ["ru-direct", "ru-blocked"],
+        "outputExtension": "_sr.list",
+        "addPrefixInLine": "IP-CIDR,"
       }
     }
   ]
