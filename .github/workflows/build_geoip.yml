@@ -65,7 +65,14 @@ jobs:
           find "${{ env.OUTPUT_PATH }}" -maxdepth 1 -type f -name "${{ env.COUTRY_PREFIX }}-*" | while read -r file; do
             dir=$(dirname "$file")
             base=$(basename "$file")
-            new_name="${dir}/geoip_${base#${{ env.COUTRY_PREFIX }}-}"
+            stripped="${base#${{ env.COUTRY_PREFIX }}-}"
+
+            if [[ "$stripped" == "blocked"* ]]; then
+              new_name="${dir}/geoip_proxy${stripped#blocked}"
+            else
+              new_name="${dir}/geoip_${stripped}"
+            fi
+
             mv "$file" "$new_name"
             echo "=> [GeoIP - Rename] $base -> $(basename "$new_name")"
           done
