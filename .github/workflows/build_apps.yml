@@ -106,17 +106,17 @@ jobs:
           done < <(yq -r '.publish | to_entries[] | "\(.key)=\(.value)"' "${{ env.CONFIG_PATH }}")
 
       # Сборка
-      - name: Build Apps YAML Rule-sets (.yaml)
-        uses: ./.github/actions/apps/yaml
+      - name: Build Apps Mihomo YAML Rule-sets (.yaml)
+        uses: ./.github/actions/apps/mihomo_yaml
         with:
           input_path: ${{ env.STAGING_PATH }}
           output_path: ${{ env.OUTPUT_PATH }}
 
-      - name: Build Sing-box App Rule-sets (.srs)
-        uses: ./.github/actions/apps/srs
-        with:
-          input_path: ${{ env.STAGING_PATH }}
-          output_path: ${{ env.OUTPUT_PATH }}
+      # - name: Build Sing-box App Rule-sets (.srs)
+      #   uses: ./.github/actions/apps/srs
+      #   with:
+      #     input_path: ${{ env.STAGING_PATH }}
+      #     output_path: ${{ env.OUTPUT_PATH }}
 
       - name: Show Final Diagnostics
         run: |
