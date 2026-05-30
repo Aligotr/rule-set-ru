@@ -23,15 +23,14 @@ runs:
           name="$(basename "$file" .json)"
           local out="${{ inputs.output_path }}/${name}_mihomo.yaml"
  
-          [ -s "$file" ] || { echo "=> [Mihomo] skipped (empty): $file"; return 0; }
+          [ -s "$file" ] || { echo "=> [APP-Mihomo-YAML] пропуск (пустой): $file"; return 0; }
 
           # Создание YAML: первая строка payload, затем остальные с форматированием
           # package_name → PROCESS-NAME (поведение Mihomo для Android)
           {
             echo "payload:"
             jq -r '
-              ( [ .rules[]? | .rules[]? | select(.process_name) | .process_name[] ]
-              + [ .rules[]? | .rules[]? | select(.package_name) | .package_name[] ] )
+              [ .rules[]? | (., .rules[]?) | (select(.process_name) | .process_name[]), (select(.package_name) | .package_name[]) ]
               | unique[]
               | "  - PROCESS-NAME," + .
             ' "$file"
