@@ -12,31 +12,32 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Compile Apps YAML
+    - name: Compile Apps Mihomo YAML
       shell: bash
       run: |
         process_file() {
           local file="$1"
           local name="$(basename "$file" .json)"
+          local suffix="_m"
 
           [ -s "$file" ] || return 0
 
           # Создание YAML: первая строка payload, затем остальные с форматированием
-          echo "payload:" > "${{ inputs.output_path }}/${name}.yaml"
+          echo "payload:" > "${{ inputs.output_path }}/${name}${suffix}.yaml"
 
           jq -r '
             [.rules[] | .rules[] | select(.process_name != null) | .process_name[]]
             | unique[]
             | "  - PROCESS-NAME," + .
-          ' "$file" >> "${{ inputs.output_path }}/${name}.yaml"
+          ' "$file" >> "${{ inputs.output_path }}/${name}${suffix}.yaml"
 
           jq -r '
             [.rules[] | .rules[] | select(.package_name != null) | .package_name[]]
             | unique[]
             | "  - PROCESS-NAME," + .
-          ' "$file" >> "${{ inputs.output_path }}/${name}.yaml"
+          ' "$file" >> "${{ inputs.output_path }}/${name}${suffix}.yaml"
 
-          echo "=> [Apps-YAML] Завершено форматирование (${name}.yaml)"
+          echo "=> [Apps-YAML] Завершено форматирование (${name}${suffix}.yaml)"
         }
 
         mkdir -p "${{ inputs.output_path }}"
