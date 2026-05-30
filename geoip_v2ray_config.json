@@ -22,7 +22,7 @@
       "action": "add",
       "args": {
         "name": "ru-blocked",
-        "uri": "./cloudflare.txt"
+        "uri": "https://raw.githubusercontent.com/Loyalsoldier/geoip/release/text/cloudflare.txt"
       }
     },
     {
@@ -30,7 +30,7 @@
       "action": "add",
       "args": {
         "name": "ru-blocked",
-        "uri": "./cloudfront.txt"
+        "uri": "https://raw.githubusercontent.com/Loyalsoldier/geoip/release/text/cloudfront.txt"
       }
     },
     {
@@ -38,7 +38,7 @@
       "action": "add",
       "args": {
         "name": "ru-blocked",
-        "uri": "./facebook.txt"
+        "uri": "https://raw.githubusercontent.com/Loyalsoldier/geoip/release/text/facebook.txt"
       }
     },
     {
@@ -46,7 +46,7 @@
       "action": "add",
       "args": {
         "name": "ru-blocked",
-        "uri": "./telegram.txt"
+        "uri": "https://raw.githubusercontent.com/Loyalsoldier/geoip/release/text/telegram.txt"
       }
     },
 
@@ -54,6 +54,7 @@
       "type": "maxmindGeoLite2ASNCSV",
       "action": "add",
       "args": {
+        "uri": "https://raw.githubusercontent.com/Loyalsoldier/geoip/release/GeoLite2-ASN.mmdb",
         "wantedList": {
           "ru-direct": [
             // gosuslugi
