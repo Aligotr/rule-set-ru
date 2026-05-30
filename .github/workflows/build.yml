@@ -64,18 +64,18 @@ jobs:
             echo "=> [Release] Директория release/text отсутствует, упаковка пропущена"
           fi
 
-      - name: Generate SHA256 checksums
-        run: |
-          set -euo pipefail
+      # - name: Generate SHA256 checksums
+      #   run: |
+      #     set -euo pipefail
 
-          cd release
+      #     cd release
 
-          # Формирование hash-файлов для всех файлов релиза
-          find . -maxdepth 1 -type f ! -name '*.sha256sum' -print0 | while IFS= read -r -d '' file; do
-            clean_name="${file#./}"
-            sha256sum "$clean_name" > "${clean_name}.sha256sum"
-            echo "=> [Release] Хэш-файл создан: ${clean_name}.sha256sum"
-          done
+      #     # Формирование hash-файлов для всех файлов релиза
+      #     find . -maxdepth 1 -type f ! -name '*.sha256sum' -print0 | while IFS= read -r -d '' file; do
+      #       clean_name="${file#./}"
+      #       sha256sum "$clean_name" > "${clean_name}.sha256sum"
+      #       echo "=> [Release] Хэш-файл создан: ${clean_name}.sha256sum"
+      #     done
 
       - name: Show release diagnostics
         run: |
