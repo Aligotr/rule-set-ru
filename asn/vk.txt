@@ -1,2 +1,0 @@
-AS204706  # VK / Mail.ru network
-AS47764 # LLC VK (Max)
