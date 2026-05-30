@@ -26,6 +26,8 @@ lists_community:
     - instagram
     - telegram
     - jetbrains
+    - anthropic
+    - google-gemini
 
   category-ads:
     - winspy
@@ -43,7 +45,7 @@ lists_local:
 lists_community_expose:
   - private
   - youtube
-  - telegram
+  - bitwarden
 
 sources:
   winspy:
