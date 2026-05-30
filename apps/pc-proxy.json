@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "rules": [
+    {
+      "process_name": ["Discord.exe", "ChatGPT.exe", "Telegram.exe"]
+    }
+  ]
+}
