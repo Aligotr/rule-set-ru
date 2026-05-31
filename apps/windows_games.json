@@ -18,7 +18,9 @@
         "SGuard64.exe",
         "SGuardSvc64.exe",
         "SGuardUpdate64.exe",
-        "ACE-Service64.exe"
+        "ACE-Service64.exe",
+
+        "FarFarWest-Win64-Shipping.exe"
       ]
     }
   ]
