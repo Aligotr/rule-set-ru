@@ -3,8 +3,5 @@ aligotr.ru
 utkins.ru
 max40in.ru
 
-# Resplash
-unsplash.com
-
 # Far Far West
 evilrapshield.com
