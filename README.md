@@ -47,8 +47,8 @@ rule-providers:
     type: http
     behavior: classical
     format: yaml
-    url: https://github.com/aligotr/rule-set-ru/releases/latest/download/apps_direct.yaml
-    path: ./rules/apps_direct.yaml
+    url: https://github.com/aligotr/rule-set-ru/releases/latest/download/apps_windows_direct_mihomo.yaml
+    path: ./rules/apps_windows_direct_mihomo.yaml
     interval: 86400
 
   geosite-proxy:
