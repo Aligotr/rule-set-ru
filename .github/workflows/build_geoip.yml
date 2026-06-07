@@ -54,7 +54,7 @@ jobs:
           go build -C "${{ env.GEOIP_PATH }}" .
 
           # Выполнение сборки по конфигурации
-          "${{ env.GEOIP_PATH }}/geoip" convert -c geoip_v2ray_config.json
+          "${{ env.GEOIP_PATH }}/geoip" convert -c geoip_config.json
 
           echo "=> [GeoIP - Build] Сборка GeoIP завершена"
 
