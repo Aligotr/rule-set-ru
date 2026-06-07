@@ -69,6 +69,3 @@ jobs:
           check_files: true
           file_glob: true
           file: release/*
-          body: |
-            Last update: ${{ env.RELEASE_NAME }}
-            Build ID: ${{ github.run_id }}
