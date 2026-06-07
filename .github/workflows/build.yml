@@ -22,7 +22,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       RELEASE_NAME: ""
-      TAG_NAME: ""
 
     steps:
       - name: Set variables
@@ -64,9 +63,12 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           release_name: ${{ env.RELEASE_NAME }}
-          tag: ${{ env.TAG_NAME }}
+          tag: latest
           make_latest: true
           overwrite: true
           check_files: true
           file_glob: true
           file: release/*
+          body: |
+            Last update: ${{ env.RELEASE_NAME }}
+            Build ID: ${{ github.run_id }}
