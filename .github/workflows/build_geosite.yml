@@ -6,7 +6,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      CONFIG_PATH: .github/geosite.yml
+      CONFIG_PATH: geosite_config.yml
       DATA_PATH: community/data
       RAW_BUILD_DATA_PATH: build-data-raw
       BUILD_DATA_PATH: build-data
