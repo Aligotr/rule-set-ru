@@ -38,6 +38,14 @@
       "action": "add",
       "args": {
         "name": "ru-blocked",
+        "uri": "https://raw.githubusercontent.com/Loyalsoldier/geoip/release/text/fastly.txt"
+      }
+    },
+    {
+      "type": "text",
+      "action": "add",
+      "args": {
+        "name": "ru-blocked",
         "uri": "https://raw.githubusercontent.com/Loyalsoldier/geoip/release/text/facebook.txt"
       }
     },
