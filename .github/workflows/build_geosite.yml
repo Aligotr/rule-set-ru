@@ -207,6 +207,8 @@ jobs:
 
           echo "=> [Resolver] Минимальное дерево правил сформировано"
 
+          grep -rn "ai.google.dev\|gemini.google" build-data-raw/ || echo "НЕ НАЙДЕНО в raw"
+
       - name: Normalize flattened rule-lists
         uses: ./.github/actions/normalize
         with:
@@ -246,6 +248,8 @@ jobs:
 
           rm -f "${{ env.OUTPUT_PATH }}/gfwlist.txt"
           echo "=> [DAT] Сборка geosite.dat завершена"
+
+          grep -rn "ai.google.dev\|gemini.google" output/*.txt || echo "НЕ НАЙДЕНО в output go-tool"
 
       - name: Prepare Staging Subsystem
         run: |
