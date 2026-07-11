@@ -44,6 +44,7 @@ lists_local:
 
 lists_community_expose:
   - private
+  - google
   - youtube
   - bitwarden
 
