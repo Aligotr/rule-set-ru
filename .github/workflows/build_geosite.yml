@@ -216,6 +216,18 @@ jobs:
           output_path: ${{ env.BUILD_DATA_PATH }}
           dedupe: "true"
 
+      - name: DEBUG check build-data after normalize
+        run: |
+          echo "=== BUILD_DATA_PATH/google (после normalize) ==="
+          grep -n "ai.google.dev\|gemini.google" "${{ env.BUILD_DATA_PATH }}/google" || echo "НЕ НАЙДЕНО в build-data/google"
+
+          echo "=== Полное содержимое строк рядом (контекст) ==="
+          grep -n -B2 -A2 "gemini.google" "${{ env.BUILD_DATA_PATH }}/google" || true
+
+          echo "=== Сравнение количества строк raw vs normalized ==="
+          echo "raw:        $(wc -l < "${{ env.RAW_BUILD_DATA_PATH }}/google")"
+          echo "normalized: $(wc -l < "${{ env.BUILD_DATA_PATH }}/google")"
+
       - name: Show Resolver Diagnostics
         run: |
           set -euo pipefail
