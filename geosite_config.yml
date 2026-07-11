@@ -28,7 +28,6 @@ lists_community:
     - telegram
     - jetbrains
     - anthropic
-    - google-deepmind
 
   category-ads:
     - winspy
